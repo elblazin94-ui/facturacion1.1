@@ -1,0 +1,13 @@
+node_modules/
+data/
+public/uploads/*
+!public/uploads/.gitkeep
+scratch/
+.env
+*.log
+*.sqlite
+!package.json
+!package-lock.json
+!firebase.json
+!firestore.indexes.json
+!railway.json

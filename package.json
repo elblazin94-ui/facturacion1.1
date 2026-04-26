@@ -1,0 +1,29 @@
+{
+  "name": "gestion-gastos-whatsapp-railway",
+  "version": "1.1.0",
+  "description": "Sistema automático de gestión de gastos vía WhatsApp + Panel Web (Versión Railway Nativa)",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "helmet": "^8.1.0",
+    "pino": "^9.4.0",
+    "qrcode": "^1.5.4",
+    "sqlite3": "^6.0.1",
+    "ws": "^8.18.0"
+  },
+  "overrides": {
+    "protobufjs": "^7.2.4"
+  }
+}
