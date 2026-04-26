@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     make \
     g++ \
     build-essential \
+    pkg-config \
     libvips-dev \
     libsqlite3-dev \
     && rm -rf /var/lib/apt/lists/*
