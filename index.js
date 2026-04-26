@@ -19,7 +19,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const PORT = process.env.PORT || 3000
 
 // Validación de seguridad (Subagente de Seguridad)
-const REQUIRED_ENV = ['GEMINI_API_KEY']
+const REQUIRED_ENV = ['GEMINI_API_KEY', 'AUTH_USER', 'AUTH_PASSWORD']
 const missing = REQUIRED_ENV.filter(k => !process.env[k])
 if (missing.length > 0) {
   console.error(`[CRÍTICO] Faltan variables de entorno: ${missing.join(', ')}`)
@@ -27,11 +27,11 @@ if (missing.length > 0) {
   // No salimos (process.exit) para permitir que el healthcheck pase y podamos ver logs
 }
 
-const AUTH_USER = process.env.AUTH_USER || 'admin'
-const AUTH_PASSWORD = process.env.AUTH_PASSWORD || 'gastos2026'
+const AUTH_USER = process.env.AUTH_USER
+const AUTH_PASSWORD = process.env.AUTH_PASSWORD
 
-if (AUTH_PASSWORD === 'gastos2026') {
-  console.warn('[Seguridad] ADVERTENCIA: Usando contraseña por defecto. Cámbiala en production (.env)')
+if (!AUTH_USER || !AUTH_PASSWORD) {
+  console.error('[Seguridad] ADVERTENCIA CRÍTICA: Faltan credenciales de acceso. El sistema no estará protegido correctamente.')
 }
 
 console.log('[Sistema] Iniciando en puerto:', PORT)
@@ -48,13 +48,6 @@ app.get('/', (req, res, next) => {
     return res.status(200).send('OK')
   }
   next()
-})
-
-app.get('/api/estado', (_req, res) => {
-  res.json({
-    estado: getEstadoConexion(),
-    qr: getQrBase64(),
-  })
 })
 
 // ─── 2. Middleware: Seguridad ─────────────────────────────────────────────────
@@ -83,6 +76,13 @@ app.use(express.json({ limit: '10mb' }))
 // ─── 3. Rutas Protegidas ──────────────────────────────────────────────────────
 app.use(basicAuth)
 app.use(express.static(join(__dirname, 'public')))
+
+app.get('/api/estado', (_req, res) => {
+  res.json({
+    estado: getEstadoConexion(),
+    qr: getQrBase64(),
+  })
+})
 
 app.get('/api/facturas', async (_req, res) => {
   try {
