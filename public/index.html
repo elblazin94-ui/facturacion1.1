@@ -713,7 +713,7 @@
             <a href="#" class="nav-item">
                 <i class="ph ph-chart-line-up"></i> Reportes
             </a>
-            <a href="#" class="nav-item">
+            <a href="#" class="nav-item" id="nav-empleados" style="display: none;">
                 <i class="ph ph-users"></i> Empleados
             </a>
             <a href="/usuarios" class="nav-item" id="nav-usuarios" style="display: none;">
@@ -812,7 +812,7 @@
                         <div class="wa-step"><span class="wa-step-num">3</span> Escanea el código QR que aparece aquí</div>
                     </div>
                     <div style="margin-top:14px;" id="wa-actions">
-                        <button id="btn-wa-reconnect" onclick="reconectarWhatsApp()" style="display:none;padding:8px 18px;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.25);border-radius:8px;font-family:var(--font-family);font-size:13px;font-weight:600;cursor:pointer;">
+                        <button id="btn-wa-reconnect" onclick="reconectarWhatsApp()" style="display:none;padding:8px 18px;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.25);border-radius:8px;font-family:var(--font-main);font-size:13px;font-weight:600;cursor:pointer;">
                             <i class="ph ph-arrows-clockwise"></i> Desvincular y Generar Nuevo QR
                         </button>
                     </div>
@@ -956,6 +956,7 @@
                 
             if (authUser.rol === 'admin') {
                 document.getElementById('nav-usuarios').style.display = 'flex';
+                document.getElementById('nav-empleados').style.display = 'flex';
             }
         }
 
@@ -1038,6 +1039,7 @@
 
         let currentTab = 'pendientes';
         let allFacturas = [];
+        let selectedFacturaId = null;
 
         function setTab(tab) {
             currentTab = tab;
@@ -1074,19 +1076,39 @@
                 return f.estado === 'Sincronizado';
             });
 
-            // Revert array to show newest first
-            const displayFacturas = [...filtered].reverse();
+            // Mostrar las más recientes arriba
+            const displayFacturas = [...filtered];
 
             displayFacturas.forEach((f, idx) => {
                 const row = document.createElement('tr');
-                const fecha = f.fecha_factura ? new Date(f.fecha_factura).toLocaleDateString('es-ES') : '—';
+                row.style.cursor = 'pointer';
                 const id = f.id;
+
+                // Resaltar si está seleccionada
+                if (selectedFacturaId === id) {
+                    row.style.backgroundColor = 'rgba(59, 130, 246, 0.05)';
+                }
+
+                row.onclick = (e) => {
+                    // No activar si se hace clic en elementos interactivos dentro de la fila
+                    if (e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.closest('a')) return;
+                    selectedFacturaId = id;
+                    updateTable(allFacturas); 
+                };
+
+                const fecha = f.fecha_factura ? new Date(f.fecha_factura).toLocaleDateString('es-ES') : '—';
+                const isAuxiliar = authUser.rol === 'auxiliar';
                 const isAdminOrContador = authUser.rol === 'admin' || authUser.rol === 'contador';
                 
                 const options = ['Nuevo', 'Revisado', 'Aprobado', 'Rechazado', 'Sincronizado'];
                 const estadoSelect = `
-                    <select onchange="cambiarEstado('${id}', this.value)" style="padding: 6px; border-radius: 6px; border: 1px solid var(--border-color); font-family: var(--font-main);" ${!isAdminOrContador ? 'disabled' : ''}>
-                        ${options.map(o => `<option value="${o}" ${(f.estado || 'Nuevo') === o ? 'selected' : ''}>${o}</option>`).join('')}
+                    <select onchange="cambiarEstado('${id}', this.value)" style="padding: 6px; border-radius: 6px; border: 1px solid var(--border-color); font-family: var(--font-main);">
+                        ${options.map(o => {
+                            // Auxiliar no puede marcar como Sincronizado
+                            const disabled = (isAuxiliar && o === 'Sincronizado') ? 'disabled' : '';
+                            const selected = (f.estado || 'Nuevo') === o ? 'selected' : '';
+                            return `<option value="${o}" ${selected} ${disabled}>${o}</option>`;
+                        }).join('')}
                     </select>
                 `;
                 
@@ -1137,54 +1159,17 @@
                 badge.textContent = okPct + '% OK';
             }
 
-            // ── Empty state en tabla ──
-            const emptyRow = document.getElementById('empty-row');
-            if (emptyRow) emptyRow.style.display = filtered.length === 0 ? '' : 'none';
+            // ── Seleccionar qué factura mostrar en el detalle ──
+            let latest = null;
+            if (selectedFacturaId) {
+                latest = facturas.find(f => f.id === selectedFacturaId);
+            }
+            if (!latest && filtered.length > 0) {
+                latest = filtered[0];
+            }
 
-            // Global functions
-            window.cambiarEstado = async function(id, estado) {
-                try {
-                    await fetch('/api/facturas/' + id + '/estado', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                        body: JSON.stringify({ estado })
-                    });
-                    // Refresh data
-                    fetchFacturas();
-                } catch (e) {
-                    console.error(e);
-                }
-            };
-
-            window.subirERP = async function(id) {
-                if (!confirm('¿Estás seguro de subir esta factura al ERP?')) return;
-                
-                try {
-                    // TODO: Conectar con API de ERP aquí
-                    console.log('Iniciando sincronización con ERP para factura:', id);
-                    
-                    const response = await fetch('/api/facturas/' + id + '/estado', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                        body: JSON.stringify({ estado: 'Sincronizado' })
-                    });
-
-                    if (response.ok) {
-                        alert('✅ Factura sincronizada correctamente con el ERP.');
-                        fetchFacturas();
-                    } else {
-                        alert('❌ Error al sincronizar con el ERP.');
-                    }
-                } catch (err) {
-                    console.error('Error ERP:', err);
-                    alert('❌ Error de conexión al subir al ERP.');
-                }
-            };
-
-            // ── Actualizar tarjeta de última factura y datos extraídos ──
-            if (facturas.length > 0) {
-                const latest = facturas[facturas.length - 1];
-
+            // ── Actualizar tarjeta de detalle y datos extraídos ──
+            if (latest) {
                 // Imagen
                 const imgEl = document.getElementById('latest-invoice-img');
                 const placeholder = document.getElementById('no-invoice-placeholder');
@@ -1215,10 +1200,14 @@
                     : '—';
                 document.getElementById('data-total').innerText = `$ ${Number(latest.importe_total || 0).toLocaleString('es-CO')} (COP)`;
 
-                const iva = (latest.importe_total || 0) * 0.19 / 1.19;
-                const sub = (latest.importe_total || 0) - iva;
-                document.getElementById('data-iva').innerText = `$ ${Math.round(iva).toLocaleString('es-CO')}`;
-                document.getElementById('data-subtotal').innerText = `$ ${Math.round(sub).toLocaleString('es-CO')}`;
+                const realIva = latest.impuestos != null ? Number(latest.impuestos) : null;
+                const realSub = latest.subtotal != null ? Number(latest.subtotal) : null;
+                
+                const displayIva = realIva !== null ? realIva : ((latest.importe_total || 0) * 0.19 / 1.19);
+                const displaySub = realSub !== null ? realSub : ((latest.importe_total || 0) - (realIva || (latest.importe_total || 0) * 0.19 / 1.19));
+
+                document.getElementById('data-iva').innerText = `$ ${Math.round(displayIva).toLocaleString('es-CO')}`;
+                document.getElementById('data-subtotal').innerText = `$ ${Math.round(displaySub).toLocaleString('es-CO')}`;
                 document.getElementById('data-estado').innerText = latest.estado || 'Nuevo';
 
                 // ── Tarjeta de validación dinámica ──
@@ -1233,16 +1222,16 @@
                 document.getElementById('val-fecha').innerHTML = chkOk(!!latest.fecha_factura);
                 document.getElementById('val-monto').innerHTML = chkOk(!!(latest.importe_total > 0));
 
-                const badge = document.getElementById('val-badge');
-                const estado = (latest.estado || 'Nuevo').toLowerCase();
-                badge.textContent = latest.estado || 'Nuevo';
-                badge.className = 'status-badge';
-                if (estado === 'sincronizado' || estado === 'aprobado') {
-                    badge.classList.add('validada');
-                } else if (estado === 'rechazado') {
-                    badge.style.background = 'var(--red-bg)'; badge.style.color = 'var(--red-text)';
+                const valBadge = document.getElementById('val-badge');
+                const estadoLower = (latest.estado || 'Nuevo').toLowerCase();
+                valBadge.textContent = latest.estado || 'Nuevo';
+                valBadge.className = 'status-badge';
+                if (estadoLower === 'sincronizado' || estadoLower === 'aprobado') {
+                    valBadge.classList.add('validada');
+                } else if (estadoLower === 'rechazado') {
+                    valBadge.style.background = 'var(--red-bg)'; valBadge.style.color = 'var(--red-text)';
                 } else {
-                    badge.style.background = '#fef9c3'; badge.style.color = '#a16207';
+                    valBadge.style.background = '#fef9c3'; valBadge.style.color = '#a16207';
                 }
             } else {
                 // Sin facturas: asegurar estado vacío
@@ -1257,7 +1246,45 @@
                 document.getElementById('validation-placeholder').style.display = 'block';
                 document.getElementById('validation-fields').style.display = 'none';
             }
+
+            // ── Empty state en tabla ──
+            const emptyRow = document.getElementById('empty-row');
+            if (emptyRow) emptyRow.style.display = filtered.length === 0 ? '' : 'none';
         }
+
+        // Funciones Globales
+        window.cambiarEstado = async function(id, estado) {
+            try {
+                await fetch('/api/facturas/' + id + '/estado', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ estado })
+                });
+                fetchFacturas();
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        window.subirERP = async function(id) {
+            if (!confirm('¿Estás seguro de subir esta factura al ERP?')) return;
+            try {
+                const response = await fetch('/api/facturas/' + id + '/estado', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ estado: 'Sincronizado' })
+                });
+                if (response.ok) {
+                    alert('✅ Factura sincronizada correctamente con el ERP.');
+                    fetchFacturas();
+                } else {
+                    alert('❌ Error al sincronizar con el ERP.');
+                }
+            } catch (err) {
+                console.error('Error ERP:', err);
+                alert('❌ Error de conexión al subir al ERP.');
+            }
+        };
 
         // ─── WhatsApp QR UI ─────────────────────────────────────────────────
         function updateWhatsAppUI(estado, qr) {
@@ -1271,6 +1298,12 @@
                 badge.innerHTML = '<span class="wa-status connected"><span class="wa-pulse connected"></span> WhatsApp Conectado — Envía facturas a este número para consolidarlas</span>';
                 steps.style.display = 'none';
                 if (btnReconnect) btnReconnect.style.display = 'inline-flex';
+            } else if (estado === 'conectando' || estado === 'reconectando') {
+                const msg = estado === 'reconectando' ? 'Reconectando...' : 'Verificando sesión...';
+                qrBox.innerHTML = `<div style="text-align:center;padding:20px;"><i class="ph ph-spinner" style="font-size:48px;color:#3b82f6;animation:spin 1s linear infinite;"></i><p style="font-size:12px;color:#3b82f6;margin-top:8px;">${msg}</p></div>`;
+                badge.innerHTML = `<span class="wa-status waiting"><span class="wa-pulse waiting"></span> ${msg}</span>`;
+                steps.style.display = 'none';
+                if (btnReconnect) btnReconnect.style.display = 'none';
             } else if (estado === 'esperando_qr' && qr) {
                 qrBox.innerHTML = `<img src="${qr}" alt="QR WhatsApp">`;
                 badge.innerHTML = '<span class="wa-status waiting"><span class="wa-pulse waiting"></span> Esperando escaneo del QR...</span>';
@@ -1280,7 +1313,7 @@
                 qrBox.innerHTML = '<div style="text-align:center;padding:20px;"><i class="ph ph-spinner" style="font-size:48px;color:#f59e0b;animation:spin 1s linear infinite;"></i><p style="font-size:12px;color:#f59e0b;margin-top:8px;">Generando QR...</p></div>';
                 badge.innerHTML = '<span class="wa-status waiting"><span class="wa-pulse waiting"></span> Preparando conexión...</span>';
                 steps.style.display = 'flex';
-                if (btnReconnect) btnReconnect.style.display = 'none';
+                if (btnReconnect) btnReconnect.style.display = 'inline-flex';
             }
         }
 

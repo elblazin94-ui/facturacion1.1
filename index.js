@@ -6,7 +6,7 @@ import { createServer } from 'http'
 import { WebSocketServer } from 'ws'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import { obtenerFacturas, actualizarEstadoFactura, toggleUsuarioActivo } from './db.js'
+import { obtenerFacturas, actualizarEstadoFactura } from './db.js'
 import {
   connectToWhatsApp,
   getQrBase64,
@@ -27,9 +27,8 @@ if (missing.length > 0) {
   console.error('El sistema NO funcionará correctamente hasta que se configuren.')
 }
 
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
-  console.warn('[Auth] SUPABASE_URL o SUPABASE_KEY no configurados.')
-  console.warn('[Auth] Usando credenciales locales AUTH_USER / AUTH_PASSWORD como fallback.')
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+  console.error('[CRÍTICO] SUPABASE_URL y SUPABASE_SERVICE_KEY son obligatorios. La autenticación NO funcionará.')
 }
 
 console.log('[Sistema] Iniciando en puerto:', PORT)
@@ -39,26 +38,85 @@ const app = express()
 // ─── 1. Healthcheck (SIN AUTH) ────────────────────────────────────────────────
 app.get('/healthz', (_req, res) => res.status(200).send('OK'))
 
-// Bypass de salud para Railway (evita el error 1/1 replicas never became healthy)
-app.get('/', (req, res, next) => {
-  const ua = req.headers['user-agent'] || ''
-  if (ua.toLowerCase().includes('railway') || ua.toLowerCase().includes('health')) {
-    return res.status(200).send('OK')
+// ─── 2. Middleware: Seguridad ─────────────────────────────────────────────────
+// Confiar en proxy (Railway/Render) para obtener IP real
+app.set('trust proxy', 1)
+// Desactivar header X-Powered-By (fingerprinting)
+app.disable('x-powered-by')
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      "default-src": ["'self'"],
+      "script-src": ["'self'", "'unsafe-inline'", "https://unpkg.com"],
+      "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://unpkg.com"],
+      "font-src": ["'self'", "https://fonts.gstatic.com", "data:"],
+      "img-src": ["'self'", "data:", "blob:", "https:"],
+      "connect-src": ["'self'", "ws:", "wss:"],
+      "object-src": ["'none'"],
+      "frame-ancestors": ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  hsts: { maxAge: 15552000, includeSubDomains: true, preload: false },
+}))
+
+// CORS restrictivo: solo mismo origen por defecto. Definir ALLOWED_ORIGINS si se requieren clientes externos.
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean)
+app.use((req, res, next) => {
+  const origin = req.headers.origin
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Vary', 'Origin')
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    if (req.method === 'OPTIONS') return res.sendStatus(204)
   }
   next()
 })
 
-// ─── 2. Middleware: Seguridad ─────────────────────────────────────────────────
-app.use(helmet({ contentSecurityPolicy: false }))
-app.use(express.json({ limit: '10mb' }))
+app.use(express.json({ limit: '1mb' }))
+
+// ─── Rate Limiting (in-memory, sin dependencias externas) ─────────────────────
+function createRateLimiter({ windowMs, max, keyFn = (req) => req.ip, message = 'Demasiadas solicitudes.' }) {
+  const hits = new Map()
+  setInterval(() => {
+    const cutoff = Date.now() - windowMs
+    for (const [k, v] of hits) if (v.start < cutoff) hits.delete(k)
+  }, windowMs).unref?.()
+  return (req, res, next) => {
+    const key = keyFn(req)
+    const now = Date.now()
+    let entry = hits.get(key)
+    if (!entry || now - entry.start > windowMs) {
+      entry = { start: now, count: 0 }
+      hits.set(key, entry)
+    }
+    entry.count++
+    if (entry.count > max) {
+      return res.status(429).json({ error: message })
+    }
+    next()
+  }
+}
+
+const loginLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000, max: 10,
+  keyFn: (req) => `${req.ip}:${(req.body?.correo || '').toLowerCase()}`,
+  message: 'Demasiados intentos de login. Espera 15 minutos.'
+})
+const apiLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 120 })
 
 // ─── 3. Login page (pública) ─────────────────────────────────────────────────
 app.get('/login', (_req, res) => {
   res.sendFile(join(__dirname, 'public', 'login.html'))
 })
 
-// ─── 4. Endpoint de autenticación (público) ───────────────────────────────────
-app.post('/api/auth/login', async (req, res) => {
+// ─── 4. Endpoint de autenticación (público con rate limit) ───────────────────
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
   const { correo, password } = req.body || {}
   if (!correo || !password) {
     return res.status(400).json({ error: 'Correo y contraseña son requeridos.' })
@@ -75,17 +133,32 @@ app.post('/api/auth/login', async (req, res) => {
 // ─── 5. Archivos estáticos ──────────────────────────────────────────────────
 app.use(express.static(join(__dirname, 'public')))
 
-// Proteger el resto de rutas (API) con requireAuth
-app.use('/api', requireAuth)
+// Proteger el resto de rutas (API) con requireAuth + rate limiter
+app.use('/api', apiLimiter, requireAuth)
+
+// Helper: respuesta de error genérica que no expone detalles internos
+const sendError = (res, status, publicMsg, internalErr) => {
+  if (internalErr) console.error(`[API] ${publicMsg}:`, internalErr.message || internalErr)
+  return res.status(status).json({ error: publicMsg })
+}
+const requireRole = (...roles) => (req, res, next) => {
+  if (!req.user || !roles.includes(req.user.rol)) {
+    return res.status(403).json({ error: 'Prohibido' })
+  }
+  next()
+}
+
+const getEmpId = (user) => user?.empresa_id || '1'
 
 // Vistas protegidas por SSR no son necesarias si usamos redirección en el cliente
-app.get('/usuarios', (req, res) => res.sendFile(join(__dirname, 'public', 'usuarios.html')))
+app.get('/usuarios', (_req, res) => res.sendFile(join(__dirname, 'public', 'usuarios.html')))
 app.get('/dashboard', (req, res) => res.redirect('/'))
 
-app.get('/api/estado', (_req, res) => {
+app.get('/api/estado', (req, res) => {
+  const empId = getEmpId(req.user)
   res.json({
-    estado: getEstadoConexion(),
-    qr: getQrBase64(),
+    estado: getEstadoConexion(empId),
+    qr: getQrBase64(empId),
   })
 })
 
@@ -102,25 +175,32 @@ app.get('/api/facturas', async (req, res) => {
 })
 
 // Cambiar estado de factura
-app.put('/api/facturas/:id/estado', async (req, res) => {
+const ESTADOS_VALIDOS = new Set(['Nuevo', 'Revisado', 'Aprobado', 'Rechazado', 'Sincronizado'])
+app.put('/api/facturas/:id/estado', requireRole('admin', 'contador', 'auxiliar'), async (req, res) => {
   try {
-    const { estado } = req.body
-    if (!estado) return res.status(400).json({ error: 'Estado requerido' })
-    const isAdminOrContador = req.user.rol === 'admin' || req.user.rol === 'contador'
-    const filterEmpresa = isAdminOrContador ? null : req.user.empresa_id
+    const { estado } = req.body || {}
+    if (!estado || !ESTADOS_VALIDOS.has(estado)) return res.status(400).json({ error: 'Estado inválido' })
+    
+    // Solo admin y contador pueden marcar como Sincronizado
+    if (estado === 'Sincronizado' && req.user.rol === 'auxiliar') {
+      return res.status(403).json({ error: 'Solo el contador puede sincronizar con el ERP' })
+    }
+
+    const isAdmin = req.user.rol === 'admin'
+    const filterEmpresa = isAdmin ? null : req.user.empresa_id
     const exito = await actualizarEstadoFactura(req.params.id, estado, filterEmpresa)
     if (!exito) return res.status(404).json({ error: 'Factura no encontrada o no autorizada' })
-    broadcast({ event: 'nueva_factura' }) // reutilizamos para forzar recarga
+    
+    broadcast({ event: 'nueva_factura' })
     res.json({ success: true })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    return sendError(res, 500, 'Error procesando la solicitud', err)
   }
 })
 
 // Listar usuarios (Híbrido: Supabase + Local)
 // Listar usuarios (desde la tabla profiles de Supabase)
-app.get('/api/usuarios', async (req, res) => {
-  if (req.user.rol !== 'admin') return res.status(403).json({ error: 'Prohibido' })
+app.get('/api/usuarios', requireRole('admin'), async (req, res) => {
   const { supabase } = await import('./auth.js')
   try {
     const { data, error } = await supabase
@@ -130,49 +210,59 @@ app.get('/api/usuarios', async (req, res) => {
     if (error) throw error
     res.json(data)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    return sendError(res, 500, 'Error obteniendo usuarios', err)
   }
 })
 
 // Crear usuario (vía Supabase Auth Admin)
-app.post('/api/usuarios', async (req, res) => {
-  if (req.user.rol !== 'admin') return res.status(403).json({ error: 'Prohibido' })
-  const { correo, password, nombre, rol, empresa_id } = req.body
-  if (!correo || !password || !nombre) return res.status(400).json({ error: 'Correo, contraseña y nombre son requeridos.' })
-  
+// Validadores
+const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const ROLES_VALIDOS = new Set(['admin', 'contador', 'auxiliar'])
+const validatePassword = (p) => typeof p === 'string' && p.length >= 8 && p.length <= 128
+const validateEmail = (e) => typeof e === 'string' && e.length <= 254 && EMAIL_RX.test(e)
+const sanitizeStr = (s, max = 200) => (typeof s === 'string' ? s.trim().slice(0, max) : null)
+
+app.post('/api/usuarios', requireRole('admin'), async (req, res) => {
+  const { correo, password, nombre, rol, empresa_id } = req.body || {}
+  if (!validateEmail(correo)) return res.status(400).json({ error: 'Correo inválido.' })
+  if (!validatePassword(password)) return res.status(400).json({ error: 'La contraseña debe tener entre 8 y 128 caracteres.' })
+  if (!sanitizeStr(nombre)) return res.status(400).json({ error: 'Nombre requerido.' })
+  if (rol && !ROLES_VALIDOS.has(rol)) return res.status(400).json({ error: 'Rol inválido.' })
+
   const { supabase } = await import('./auth.js')
-  
+
   try {
     const { data, error } = await supabase.auth.admin.createUser({
       email: correo,
       password: password,
       email_confirm: true,
-      user_metadata: { 
-        nombre: nombre,
+      user_metadata: {
+        nombre: sanitizeStr(nombre),
         role: rol || 'auxiliar',
-        empresa_id: empresa_id || '1',
-        telefono: req.body.telefono || null,
-        empresa_nombre: req.body.empresa_nombre || null,
-        nit: req.body.nit || null,
-        direccion: req.body.direccion || null,
-        ciudad: req.body.ciudad || null,
-        departamento: req.body.departamento || null
+        empresa_id: sanitizeStr(empresa_id) || '1',
+        telefono: sanitizeStr(req.body.telefono, 32),
+        empresa_nombre: sanitizeStr(req.body.empresa_nombre),
+        nit: sanitizeStr(req.body.nit, 32),
+        direccion: sanitizeStr(req.body.direccion),
+        ciudad: sanitizeStr(req.body.ciudad, 80),
+        departamento: sanitizeStr(req.body.departamento, 80)
       }
     })
 
     if (error) throw error
-    res.json({ success: true, user: data.user })
+    res.json({ success: true, user: { id: data.user.id, email: data.user.email } })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    return sendError(res, 500, 'No se pudo crear el usuario', err)
   }
 })
 
 // Crear Empresa (Genera Contador y Auxiliar)
-app.post('/api/empresas', async (req, res) => {
-  if (req.user.rol !== 'admin') return res.status(403).json({ error: 'Prohibido' })
-  const { empresa_nombre, empresa_id, correo_contador, correo_auxiliar, password } = req.body
-  if (!empresa_nombre || !empresa_id || !correo_contador || !correo_auxiliar || !password) {
-    return res.status(400).json({ error: 'Faltan campos obligatorios para registrar la empresa.' })
+app.post('/api/empresas', requireRole('admin'), async (req, res) => {
+  const { empresa_nombre, empresa_id, correo_contador, correo_auxiliar, password } = req.body || {}
+  if (!sanitizeStr(empresa_nombre) || !sanitizeStr(empresa_id) ||
+      !validateEmail(correo_contador) || !validateEmail(correo_auxiliar) ||
+      !validatePassword(password)) {
+    return res.status(400).json({ error: 'Datos inválidos o faltantes para registrar la empresa.' })
   }
   
   const { supabase } = await import('./auth.js')
@@ -347,8 +437,8 @@ app.delete('/api/clientes/:id', async (req, res) => {
 })
 
 
-app.post('/api/logout', async (_req, res) => {
-  await logoutWhatsApp()
+app.post('/api/logout', async (req, res) => {
+  await logoutWhatsApp(getEmpId(req.user))
   res.json({ success: true })
 })
 
@@ -367,8 +457,8 @@ wss.on('connection', async (ws) => {
     ws.send(JSON.stringify({
       event: 'estado_inicial',
       data: {
-        estado: getEstadoConexion(),
-        qr: getQrBase64()
+        estado: getEstadoConexion('1'),
+        qr: getQrBase64('1')
       },
     }))
   } catch (err) {
@@ -390,54 +480,9 @@ setOnNuevaFactura((factura) => {
   broadcast({ event: 'nueva_factura', data: factura })
 })
 
-// ─── 5. Seed: Crear usuario de prueba si no existe ───────────────────────────
-async function seedTestUser() {
-  const { buscarUsuarioLocal, agregarUsuarioLocal } = await import('./db.js')
-  
-  const testUsers = [
-    {
-      correo: 'demo@empresa.com',
-      contrasena: hashPassword('Demo2026!'),
-      nombre: 'Carlos Mendoza',
-      telefono: '+57 315 123 4567',
-      empresa_nombre: 'Distribuciones El Progreso S.A.S',
-      nit: '901.234.567-8',
-      direccion: 'Cra 15 #45-30 Oficina 201',
-      ciudad: 'Pereira',
-      departamento: 'Risaralda',
-      rol: 'auxiliar',
-      empresa_id: 'emp-001',
-    },
-    {
-      correo: 'admin@danisolutions.com',
-      contrasena: hashPassword('danisolutions2026'),
-      nombre: 'Admin DaniSolutions',
-      telefono: '+57 300 000 0000',
-      empresa_nombre: 'DaniSolutions',
-      nit: '900.000.000-0',
-      direccion: 'Sede Principal',
-      ciudad: 'Pereira',
-      departamento: 'Risaralda',
-      rol: 'admin',
-      empresa_id: '1',
-    }
-  ]
-
-  for (const user of testUsers) {
-    try {
-      const existe = await buscarUsuarioLocal(user.correo)
-      if (!existe) {
-        await agregarUsuarioLocal(user)
-        console.log(`[Seed] Usuario creado: ${user.correo} (${user.rol})`)
-      }
-    } catch (err) {
-      // Ignorar si ya existe
-      if (!err.message.includes('UNIQUE')) {
-        console.warn(`[Seed] Error creando ${user.correo}:`, err.message)
-      }
-    }
-  }
-}
+// seedTestUser eliminado: buscarUsuarioLocal / agregarUsuarioLocal son stubs no-op
+// que delegan en Supabase Auth. Los usuarios de prueba deben crearse directamente
+// desde el panel de Supabase o mediante el endpoint POST /api/empresas.
 
 // ─── 6. Arranque ──────────────────────────────────────────────────────────────
 process.on('unhandledRejection', (reason, promise) => {
@@ -458,9 +503,6 @@ server.listen(PORT, '0.0.0.0', async () => {
   console.log(`🚀 SERVIDOR LISTO EN 0.0.0.0:${PORT}`)
   console.log(`📡 Healthcheck: http://0.0.0.0:${PORT}/healthz`)
   console.log('=========================================')
-  
-  // Crear usuarios de prueba
-  await seedTestUser()
   
   // Iniciar WhatsApp en segundo plano (no bloqueante)
   setTimeout(() => {

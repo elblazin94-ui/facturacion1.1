@@ -166,11 +166,11 @@
             <!-- Stats -->
             <div class="stats-row">
                 <div class="stat-card">
-                    <div class="stat-label"><i class="ph ph-users"></i> Total Usuarios</div>
+                    <div class="stat-label"><i class="ph ph-buildings"></i> Empresas Registradas</div>
                     <div class="stat-value" id="stat-total">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label"><i class="ph ph-shield-check"></i> Rol Administrador</div>
+                    <div class="stat-label"><i class="ph ph-users"></i> Total Cuentas (Cot + Aux)</div>
                     <div class="stat-value" style="color:var(--primary)" id="stat-admins">0</div>
                 </div>
             </div>
@@ -232,11 +232,10 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Nombre</th>
-                                <th>Email</th>
+                                <th>Empresa</th>
                                 <th>Empresa ID</th>
-                                <th>Rol</th>
-                                <th>Creado</th>
+                                <th>Contador</th>
+                                <th>Auxiliar</th>
                                 <th style="text-align:center">Acciones</th>
                             </tr>
                         </thead>
@@ -275,21 +274,51 @@
     }
 
     function renderUsers(users) {
+        // Agrupar por empresa_id (ignorando admins)
+        const empresas = {};
+        let totalCuentas = 0;
+        
+        users.forEach(u => {
+            if (u.role === 'admin') return;
+            totalCuentas++;
+            
+            if (!empresas[u.empresa_id]) {
+                empresas[u.empresa_id] = {
+                    id: u.empresa_id,
+                    nombre: u.empresa_nombre || u.nombre || 'Sin Nombre',
+                    contador: null,
+                    auxiliar: null,
+                    contador_id: null,
+                    auxiliar_id: null
+                };
+            }
+            if (u.role === 'contador') {
+                empresas[u.empresa_id].contador = u.email;
+                empresas[u.empresa_id].contador_id = u.id;
+            }
+            if (u.role === 'auxiliar') {
+                empresas[u.empresa_id].auxiliar = u.email;
+                empresas[u.empresa_id].auxiliar_id = u.id;
+            }
+        });
+
+        document.getElementById('stat-total').textContent = Object.keys(empresas).length;
+        document.getElementById('stat-admins').textContent = totalCuentas;
+
         const tbody = document.getElementById('lista-usuarios');
         tbody.innerHTML = '';
-        users.forEach(u => {
+        Object.values(empresas).forEach(emp => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><div class="empresa-name">${u.nombre || '—'}</div></td>
-                <td>${u.email}</td>
-                <td><code style="font-size:11px;">${u.empresa_id}</code></td>
-                <td><span class="badge badge-${u.role}">${u.role}</span></td>
-                <td style="color:var(--text-muted);font-size:12px;">${u.created_at ? new Date(u.created_at).toLocaleDateString('es-CO') : '—'}</td>
+                <td><div class="empresa-name" style="font-weight:600;">${emp.nombre}</div></td>
+                <td><code style="font-size:11px;">${emp.id}</code></td>
+                <td style="font-size:13px;">${emp.contador || '<span style="color:red">Falta</span>'}</td>
+                <td style="font-size:13px;">${emp.auxiliar || '<span style="color:red">Falta</span>'}</td>
                 <td style="text-align:center">
-                    <button class="btn btn-sm btn-ghost" onclick="changePassword('${u.id}')" style="margin-right:4px;">
+                    <button class="btn btn-sm btn-ghost" onclick="changeCompanyPassword('${emp.contador_id}', '${emp.auxiliar_id}')" style="margin-right:4px;">
                         <i class="ph ph-key"></i> Clave
                     </button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}')">
+                    <button class="btn btn-sm btn-danger" onclick="deleteCompany('${emp.contador_id}', '${emp.auxiliar_id}')">
                         <i class="ph ph-trash"></i>
                     </button>
                 </td>
@@ -308,27 +337,26 @@
             }
             allUsers = data;
             renderUsers(allUsers);
-            document.getElementById('stat-total').textContent = allUsers.length;
-            document.getElementById('stat-admins').textContent = allUsers.filter(u => u.role === 'admin').length;
         } catch (err) { console.error('Error:', err); }
     }
 
-    window.deleteUser = async function(id) {
-        if (!confirm('¿Estás seguro de eliminar este usuario? Se borrará de Supabase Auth permanentemente.')) return;
+    window.deleteCompany = async function(cotId, auxId) {
+        if (!confirm('¿Estás seguro de eliminar esta empresa? Se borrarán AMBAS cuentas permanentemente.')) return;
+        
         try {
-            const res = await fetch(`/api/usuarios/${id}`, { method:'DELETE' });
-            if (res.ok) {
-                showAlert('✅ Usuario eliminado correctamente', 'success');
-                fetchUsuarios();
-            } else {
-                const err = await res.json();
-                showAlert('❌ Error: ' + err.error, 'error');
-            }
-        } catch(e) { console.error(e); }
+            if (cotId && cotId !== 'null') await fetch(`/api/usuarios/${cotId}`, { method:'DELETE' });
+            if (auxId && auxId !== 'null') await fetch(`/api/usuarios/${auxId}`, { method:'DELETE' });
+            
+            showAlert('✅ Empresa eliminada correctamente', 'success');
+            fetchUsuarios();
+        } catch(e) { 
+            console.error(e);
+            showAlert('❌ Error al eliminar', 'error'); 
+        }
     };
 
-    window.changePassword = async function(id) {
-        const newPass = prompt('Ingresa la nueva contraseña para este usuario (mín. 6 caracteres):');
+    window.changeCompanyPassword = async function(cotId, auxId) {
+        const newPass = prompt('Ingresa la nueva contraseña para ESTA EMPRESA (afecta al contador y auxiliar):');
         if (!newPass) return;
         if (newPass.length < 6) {
             showAlert('❌ La contraseña debe tener al menos 6 caracteres.', 'error');
@@ -336,20 +364,18 @@
         }
         
         try {
-            const res = await fetch(`/api/usuarios/${id}/password`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ newPassword: newPass })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                showAlert('✅ ' + data.message, 'success');
-            } else {
-                showAlert('❌ ' + (data.error || 'Error al cambiar contraseña'), 'error');
-            }
+            const reqs = [];
+            const body = JSON.stringify({ newPassword: newPass });
+            const headers = { 'Content-Type': 'application/json' };
+            
+            if (cotId && cotId !== 'null') reqs.push(fetch(`/api/usuarios/${cotId}/password`, { method: 'PUT', headers, body }));
+            if (auxId && auxId !== 'null') reqs.push(fetch(`/api/usuarios/${auxId}/password`, { method: 'PUT', headers, body }));
+            
+            await Promise.all(reqs);
+            showAlert('✅ Clave de la empresa actualizada', 'success');
         } catch(e) { 
             console.error(e);
-            showAlert('❌ Error de red', 'error'); 
+            showAlert('❌ Error de red al cambiar clave', 'error'); 
         }
     };
 

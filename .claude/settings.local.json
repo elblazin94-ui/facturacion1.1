@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s http://localhost:3000/healthz)",
+      "PowerShell(Start-Sleep 5; $status = Invoke-WebRequest -Uri \"http://localhost:3000/healthz\" -UseBasicParsing; \"Status: $\\($status.StatusCode\\) - $\\($status.Content\\)\"; Get-Content \"C:\\\\Temp\\\\app_err.log\" -ErrorAction SilentlyContinue | Select-Object -Last 20)"
+    ]
+  }
+}
