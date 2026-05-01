@@ -270,5 +270,8 @@ async function procesarMensajeWhatsApp(sock, msg, empresaId) {
 
 function formatearResumen(f) {
   const importe = f.importe_total ? `${Number(f.importe_total).toLocaleString('es-CO')} ${f.moneda || ''}` : 'N/D'
-  return `✅ *Factura procesada para ${f.empresa_id}*\n\n📋 *Proveedor:* ${f.proveedor || 'N/D'}\n💰 *Total:* ${importe}\n📅 *Fecha:* ${f.fecha_factura || 'N/D'}\n\n_Disponible en el panel._`
+  const categoria = f.categoria ? `\n📂 *Categoría:* ${f.categoria}` : ''
+  const nFactura = f.numero_factura ? `\n📄 *Nº Factura:* ${f.numero_factura}` : ''
+  
+  return `✅ *Factura procesada correctamente*\n\n📋 *Proveedor:* ${f.proveedor || 'N/D'}${nFactura}${categoria}\n💰 *Total:* ${importe}\n📅 *Fecha:* ${f.fecha_factura || 'N/D'}\n\n_Tu gasto ya está disponible y categorizado en el panel web._`
 }
