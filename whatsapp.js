@@ -3,7 +3,6 @@ import makeWASocket, {
   DisconnectReason,
   useMultiFileAuthState,
   downloadMediaMessage,
-  Browsers,
   fetchLatestBaileysVersion,
 } from '@whiskeysockets/baileys'
 import { Boom } from '@hapi/boom'
@@ -13,8 +12,9 @@ import fs from 'fs'
 import fsPromises from 'fs/promises'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { extraerDatosFactura } from './gemini.js'
+import { extraerURLDeQR, extraerDatosFacturaDIAN, extraerDatosFactura } from './gemini.js'
 import { agregarFactura, esFacturaDuplicada } from './db.js'
+import { supabase } from './auth.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = path.join(__dirname, 'data')
@@ -29,6 +29,7 @@ let sockInstance = null
 let qrImageBase64 = null      // QR como imagen PNG en base64
 let estadoConexion = 'desconectado' // 'desconectado' | 'esperando_qr' | 'conectado'
 let onNuevaFactura = null     // callback inyectado desde index.js
+let qrRefreshTimer = null     // Timer para refrescar QR si expira
 
 const TIPOS_PERMITIDOS = new Set([
   'imageMessage',
@@ -60,14 +61,15 @@ export async function logoutWhatsApp() {
   if (sockInstance) {
     try {
       await sockInstance.logout()
+      sockInstance.end()
     } catch (err) {
       console.log('Error al hacer logout:', err)
     }
   }
   
+  sockInstance = null
   estadoConexion = 'desconectado'
   qrImageBase64 = null
-  // Nota: En Firestore habría que borrar la colección wa_session si quisiéramos un reset total
   console.log('[WhatsApp] Sesión cerrada. Reiniciando en 2s...')
   setTimeout(() => connectToWhatsApp().catch(console.error), 2000)
 }
@@ -81,12 +83,14 @@ export async function connectToWhatsApp() {
     version,
     auth: state,
     logger: pino({ level: 'silent' }),
-    browser: Browsers.ubuntu('Chrome'),
+    // Usar Chrome genérico para evitar el error 'error al vincular'
+    browser: ['Expensify Hub', 'Chrome', '120.0.0'],
     connectTimeoutMs: 60000,
     defaultQueryTimeoutMs: 60000,
     retryRequestDelayMs: 2000,
     generateHighQualityLinkPreview: false,
     syncFullHistory: false,
+    printQRInTerminal: false,
   })
 
   sockInstance = sock
@@ -105,6 +109,16 @@ export async function connectToWhatsApp() {
         width: 300,
       })
       console.log('[WhatsApp] QR generado — escanea desde el panel web')
+      
+      // Cancelar timer anterior si existía
+      if (qrRefreshTimer) clearTimeout(qrRefreshTimer)
+      // El QR de WhatsApp expira en ~20s. Si en 19s no se escaneó, reiniciamos la conexión
+      qrRefreshTimer = setTimeout(async () => {
+        if (estadoConexion === 'esperando_qr') {
+          console.log('[WhatsApp] QR expirado — regenerando...')
+          try { sock.end() } catch(e) {}
+        }
+      }, 19000)
     }
 
     if (connection === 'close') {
@@ -118,7 +132,14 @@ export async function connectToWhatsApp() {
       if (shouldReconnect) {
         setTimeout(() => connectToWhatsApp(), 3000)
       } else {
-        console.log('[WhatsApp] Sesión finalizada externamente. Reiniciando...')
+        console.log('[WhatsApp] Sesión finalizada o logout. Limpiando y reiniciando...')
+        // Limpiar carpeta de auth si fue un logout manual para asegurar nuevo QR
+        try {
+            await fsPromises.rm(AUTH_DIR, { recursive: true, force: true })
+            console.log('[WhatsApp] Carpeta auth_info eliminada.')
+        } catch (e) {
+            console.error('[WhatsApp] No se pudo eliminar auth_info:', e.message)
+        }
         setTimeout(() => connectToWhatsApp(), 2000)
       }
     }
@@ -184,15 +205,42 @@ export async function connectToWhatsApp() {
           continue
         }
 
-        // Llamar a Gemini
-        const datos = await extraerDatosFactura(buffer, mimeType)
+        let datos;
+        let qrUrl = null;
+        try {
+          qrUrl = await extraerURLDeQR(buffer, mimeType);
+          console.log('[WhatsApp] URL de QR extraída:', qrUrl);
+          // Consultar a la DIAN con esa URL
+          datos = await extraerDatosFacturaDIAN(qrUrl);
+        } catch (qrErr) {
+          console.warn('[WhatsApp] Fallo extracción QR/DIAN, intentando OCR directo:', qrErr.message);
+          // Fallback a extraer directamente de la imagen
+          datos = await extraerDatosFactura(buffer, mimeType);
+        }
 
-        // Guardar el archivo adjunto en public/uploads para verlo en el dashboard
+        // Subir a Supabase Storage en lugar de local (o además de local)
         const ext = mimeType === 'application/pdf' ? 'pdf' : (mimeType.split('/')[1] || 'jpg')
         const filename = `factura_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`
-        const filepath = path.join(UPLOADS_DIR, filename)
-        await fsPromises.writeFile(filepath, buffer)
-        const url_archivo = `/uploads/${filename}`
+        
+        let url_archivo = '';
+        if (supabase) {
+          const { data, error } = await supabase.storage.from('facturas_adjuntos').upload(filename, buffer, { contentType: mimeType })
+          if (error) {
+            console.error('[WhatsApp] Error subiendo a Supabase Storage:', error.message)
+            url_archivo = `/uploads/${filename}` // Fallback local
+            const filepath = path.join(UPLOADS_DIR, filename)
+            await fsPromises.writeFile(filepath, buffer)
+          } else {
+            const { data: pubData } = supabase.storage.from('facturas_adjuntos').getPublicUrl(filename)
+            url_archivo = pubData.publicUrl
+          }
+        } else {
+           const filepath = path.join(UPLOADS_DIR, filename)
+           await fsPromises.writeFile(filepath, buffer)
+           url_archivo = `/uploads/${filename}`
+        }
+
+        datos.url_archivo = url_archivo;
 
         // Asegurar que los números sean puros para evitar recortes
         const sanitizeNum = (v) => {
@@ -251,8 +299,13 @@ export async function connectToWhatsApp() {
           continue
         }
 
-        // Guardar en DB
-        const factura = await agregarFactura({ ...datos, remitente: from, archivo: url_archivo })
+        // Guardar en DB (asignamos empresa_id por defecto si es multi-empresa)
+        const facturaPayload = { ...datos, empresa_id: 'da-servicios-sas' }
+        const factura = await agregarFactura(facturaPayload)
+
+        if (!factura) {
+          throw new Error('Error al guardar la factura en la base de datos (posible fallo de Supabase).')
+        }
 
         // Confirmar al usuario con resumen estructurado
         const resumen = formatearResumen(factura)

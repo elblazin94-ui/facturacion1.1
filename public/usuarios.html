@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expensify Hub - Gestión de Usuarios</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        :root {
+            --bg-body: #0f1117;
+            --bg-sidebar: #161822;
+            --bg-main: #0f1117;
+            --bg-card: #1a1d2e;
+            --bg-card-hover: #1f2336;
+            --bg-input: #12141f;
+            --border-color: #2a2d3e;
+            --border-focus: #6366f1;
+            --text-main: #e2e8f0;
+            --text-muted: #8892b0;
+            --text-heading: #f1f5f9;
+            --primary: #6366f1;
+            --primary-hover: #818cf8;
+            --primary-glow: rgba(99,102,241,0.25);
+            --sidebar-active-bg: rgba(99,102,241,0.12);
+            --sidebar-active-text: #818cf8;
+            --green: #22c55e;
+            --green-bg: rgba(34,197,94,0.12);
+            --red: #ef4444;
+            --red-bg: rgba(239,68,68,0.12);
+            --amber: #f59e0b;
+            --amber-bg: rgba(245,158,11,0.12);
+            --font: 'Inter', sans-serif;
+            --radius: 12px;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:var(--bg-body); color:var(--text-main); font-family:var(--font); display:flex; height:100vh; overflow:hidden; -webkit-font-smoothing:antialiased; }
+
+        /* Sidebar */
+        .sidebar { width:250px; background:var(--bg-sidebar); border-right:1px solid var(--border-color); display:flex; flex-direction:column; padding:24px 0; flex-shrink:0; }
+        .logo { display:flex; align-items:center; gap:12px; padding:0 24px; margin-bottom:40px; font-weight:700; font-size:20px; color:var(--text-heading); }
+        .logo i { color:var(--primary); font-size:28px; }
+        .sidebar-nav { display:flex; flex-direction:column; gap:4px; padding:0 12px; }
+        .nav-item { display:flex; align-items:center; gap:12px; padding:12px 16px; text-decoration:none; color:var(--text-muted); border-radius:10px; font-size:14px; font-weight:500; transition:all .2s; }
+        .nav-item i { font-size:20px; }
+        .nav-item:hover { background:rgba(255,255,255,.04); color:var(--text-main); }
+        .nav-item.active { background:var(--sidebar-active-bg); color:var(--sidebar-active-text); }
+
+        /* Main */
+        .main-content { flex:1; display:flex; flex-direction:column; overflow-y:auto; }
+        .top-header { display:flex; justify-content:space-between; align-items:center; padding:20px 32px; border-bottom:1px solid var(--border-color); backdrop-filter:blur(12px); position:sticky; top:0; z-index:10; background:rgba(15,17,23,.85); }
+        .top-header h1 { font-size:20px; font-weight:700; color:var(--text-heading); }
+        .header-right { display:flex; align-items:center; gap:16px; }
+        .header-right .user-tag { font-size:13px; color:var(--text-muted); padding:6px 14px; background:var(--bg-card); border-radius:20px; border:1px solid var(--border-color); }
+
+        .dashboard-content { padding:28px 32px; max-width:1100px; margin:0 auto; width:100%; display:flex; flex-direction:column; gap:28px; }
+
+        /* Stats row */
+        .stats-row { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
+        .stat-card { background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius); padding:20px; transition:all .2s; }
+        .stat-card:hover { border-color:var(--primary); box-shadow:0 0 20px var(--primary-glow); }
+        .stat-label { font-size:13px; color:var(--text-muted); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+        .stat-label i { font-size:16px; }
+        .stat-value { font-size:28px; font-weight:800; color:var(--text-heading); }
+
+        /* Cards */
+        .card { background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius); overflow:hidden; transition:border-color .2s; }
+        .card:hover { border-color:rgba(99,102,241,.3); }
+        .card-header { padding:16px 20px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; }
+        .card-title { font-size:15px; font-weight:600; color:var(--text-heading); display:flex; align-items:center; gap:10px; }
+        .card-title i { color:var(--primary); font-size:18px; }
+        .card-body { padding:24px; }
+
+        /* Form */
+        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+        .form-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px; }
+        .form-group { display:flex; flex-direction:column; gap:6px; }
+        .form-group.full { grid-column:1/-1; }
+        label { font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
+        input, select { width:100%; padding:10px 14px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:8px; color:var(--text-main); font-family:var(--font); font-size:14px; outline:none; transition:all .2s; }
+        input::placeholder { color:#4a5072; }
+        input:focus, select:focus { border-color:var(--border-focus); box-shadow:0 0 0 3px var(--primary-glow); }
+        select { cursor:pointer; }
+        select option { background:var(--bg-card); }
+
+        .btn { padding:10px 20px; border:none; border-radius:8px; font-family:var(--font); font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; display:inline-flex; align-items:center; gap:8px; }
+        .btn-primary { background:var(--primary); color:#fff; }
+        .btn-primary:hover { background:var(--primary-hover); box-shadow:0 4px 16px var(--primary-glow); transform:translateY(-1px); }
+        .btn-primary:disabled { opacity:.5; cursor:not-allowed; transform:none; box-shadow:none; }
+        .btn-ghost { background:transparent; color:var(--primary); border:1px solid var(--border-color); }
+        .btn-ghost:hover { border-color:var(--primary); background:rgba(99,102,241,.06); }
+        .btn-sm { padding:6px 12px; font-size:12px; border-radius:6px; }
+        .btn-danger { background:var(--red-bg); color:var(--red); border:1px solid rgba(239,68,68,.2); }
+        .btn-danger:hover { background:rgba(239,68,68,.2); }
+        .btn-success { background:var(--green-bg); color:var(--green); border:1px solid rgba(34,197,94,.2); }
+        .btn-success:hover { background:rgba(34,197,94,.2); }
+
+        /* Alert */
+        .alert { padding:12px 16px; border-radius:8px; font-size:13px; font-weight:500; display:none; align-items:center; gap:10px; margin-bottom:16px; }
+        .alert.success { display:flex; background:var(--green-bg); color:var(--green); border:1px solid rgba(34,197,94,.2); }
+        .alert.error { display:flex; background:var(--red-bg); color:var(--red); border:1px solid rgba(239,68,68,.2); }
+
+        /* Table */
+        .table-wrap { overflow-x:auto; }
+        table { width:100%; border-collapse:collapse; }
+        th { text-align:left; padding:12px 16px; font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border-color); background:rgba(255,255,255,.02); }
+        td { padding:12px 16px; font-size:13px; border-bottom:1px solid rgba(255,255,255,.04); }
+        tr:hover td { background:rgba(99,102,241,.03); }
+        .badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+        .badge-admin { background:rgba(99,102,241,.15); color:#818cf8; }
+        .badge-contador { background:rgba(34,197,94,.15); color:#22c55e; }
+        .badge-auxiliar { background:rgba(255,255,255,.06); color:var(--text-muted); }
+        .badge-activo { background:var(--green-bg); color:var(--green); }
+        .badge-inactivo { background:var(--red-bg); color:var(--red); }
+        .empresa-name { font-weight:600; color:var(--text-heading); }
+        .empresa-nit { font-size:11px; color:var(--text-muted); }
+
+        /* Search */
+        .search-bar { display:flex; align-items:center; gap:10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:8px; padding:0 14px; transition:border-color .2s; }
+        .search-bar:focus-within { border-color:var(--border-focus); }
+        .search-bar i { color:var(--text-muted); font-size:18px; }
+        .search-bar input { border:none; background:transparent; padding:10px 0; box-shadow:none; }
+        .search-bar input:focus { box-shadow:none; }
+
+        /* SQL Notice */
+        .sql-notice { background:var(--amber-bg); border:1px solid rgba(245,158,11,.2); padding:16px; border-radius:var(--radius); display:none; }
+        .sql-notice h3 { font-size:13px; color:var(--amber); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+        .sql-notice code { background:#000; color:#e2e8f0; padding:12px; border-radius:8px; display:block; margin-top:8px; font-size:12px; white-space:pre-wrap; font-family:'Fira Code',monospace; }
+
+        @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .card { animation:fadeIn .3s ease forwards; }
+
+        @media(max-width:900px) {
+            .sidebar { display:none; }
+            .form-grid,.form-grid-3 { grid-template-columns:1fr; }
+            .stats-row { grid-template-columns:1fr; }
+        }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="logo"><i class="ph-fill ph-receipt"></i><span>Expensify Hub</span></div>
+        <nav class="sidebar-nav">
+            <a href="/" class="nav-item"><i class="ph ph-house"></i> Resumen</a>
+            <a href="/clientes.html" class="nav-item"><i class="ph ph-users-three"></i> Mis Clientes</a>
+            <a href="/usuarios.html" class="nav-item active"><i class="ph ph-buildings"></i> Usuarios (Auth)</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-header">
+            <h1>Gestión de Usuarios (Supabase Auth)</h1>
+            <div class="header-right">
+                <span class="user-tag" id="user-name-display"></span>
+            </div>
+        </header>
+
+        <div class="dashboard-content">
+            <div id="sql-instructions" class="sql-notice">
+                <h3><i class="ph-bold ph-warning"></i> Actualiza tu base de datos</h3>
+                <p style="font-size:12px;color:var(--amber);">Asegúrate de haber ejecutado el contenido de <code>supabase_setup.sql</code> en tu SQL Editor de Supabase para habilitar la tabla de perfiles y el disparador automático.</p>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-label"><i class="ph ph-users"></i> Total Usuarios</div>
+                    <div class="stat-value" id="stat-total">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label"><i class="ph ph-shield-check"></i> Rol Administrador</div>
+                    <div class="stat-value" style="color:var(--primary)" id="stat-admins">0</div>
+                </div>
+            </div>
+
+            <!-- Registration Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title"><i class="ph ph-buildings"></i> Registrar Nueva Empresa</h2>
+                </div>
+                <div class="card-body">
+                    <div id="alert-box" class="alert"></div>
+                    <form id="form-usuario">
+                        <div class="form-grid" style="margin-bottom:18px;">
+                            <div class="form-group">
+                                <label>Nombre de la Empresa</label>
+                                <input type="text" id="empresa_nombre" required placeholder="Ej. DA Servicios">
+                            </div>
+                            <div class="form-group">
+                                <label>ID de la Empresa</label>
+                                <input type="text" id="empresa_id" required placeholder="Ej. da-servicios">
+                            </div>
+                        </div>
+                        <div class="form-grid" style="margin-bottom:22px;">
+                            <div class="form-group">
+                                <label>Correo del Contador (ERP Sync)</label>
+                                <input type="email" id="correo_contador" required placeholder="contador@empresa.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Correo del Auxiliar (Lectura)</label>
+                                <input type="email" id="correo_auxiliar" required placeholder="auxiliar@empresa.com">
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom:22px;">
+                            <label>Contraseña por defecto (Para ambas cuentas)</label>
+                            <input type="password" id="password" required placeholder="Min. 6 caracteres" minlength="6">
+                        </div>
+                        <div style="margin-top:22px;">
+                            <button type="submit" class="btn btn-primary" id="btn-submit">
+                                <i class="ph ph-buildings"></i> Registrar Empresa y Usuarios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- User List -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title"><i class="ph ph-list-bullets"></i> Usuarios Registrados (Profiles)</h2>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <div class="search-bar">
+                            <i class="ph ph-magnifying-glass"></i>
+                            <input type="text" id="search-input" placeholder="Buscar por email o nombre...">
+                        </div>
+                        <button class="btn btn-ghost btn-sm" onclick="fetchUsuarios()"><i class="ph ph-arrows-clockwise"></i> Actualizar</button>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Email</th>
+                                <th>Empresa ID</th>
+                                <th>Rol</th>
+                                <th>Creado</th>
+                                <th style="text-align:center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-usuarios"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+<script>
+    const token = localStorage.getItem('auth_token');
+    if (!token) window.location.replace('/login.html');
+    const authUser = JSON.parse(localStorage.getItem('auth_user') || '{}');
+    if (authUser.rol !== 'admin' && authUser.rol !== 'contador') window.location.replace('/');
+    document.getElementById('user-name-display').textContent = authUser.nombre || authUser.email;
+
+    const originalFetch = window.fetch;
+    window.fetch = function(url, options = {}) {
+        options.headers = options.headers || {};
+        options.headers['Authorization'] = `Bearer ${token}`;
+        return originalFetch(url, options);
+    };
+
+    const form = document.getElementById('form-usuario');
+    const alertBox = document.getElementById('alert-box');
+    const btn = document.getElementById('btn-submit');
+    const sqlEl = document.getElementById('sql-instructions');
+    const searchInput = document.getElementById('search-input');
+    let allUsers = [];
+
+    function showAlert(msg, type) {
+        alertBox.textContent = msg;
+        alertBox.className = `alert ${type}`;
+        setTimeout(() => { if(type==='success') alertBox.className='alert'; }, 4000);
+    }
+
+    function renderUsers(users) {
+        const tbody = document.getElementById('lista-usuarios');
+        tbody.innerHTML = '';
+        users.forEach(u => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><div class="empresa-name">${u.nombre || '—'}</div></td>
+                <td>${u.email}</td>
+                <td><code style="font-size:11px;">${u.empresa_id}</code></td>
+                <td><span class="badge badge-${u.role}">${u.role}</span></td>
+                <td style="color:var(--text-muted);font-size:12px;">${u.created_at ? new Date(u.created_at).toLocaleDateString('es-CO') : '—'}</td>
+                <td style="text-align:center">
+                    <button class="btn btn-sm btn-ghost" onclick="changePassword('${u.id}')" style="margin-right:4px;">
+                        <i class="ph ph-key"></i> Clave
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}')">
+                        <i class="ph ph-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function fetchUsuarios() {
+        try {
+            const res = await fetch('/api/usuarios');
+            const data = await res.json();
+            if (!res.ok) {
+                if (data.error && data.error.includes('profiles')) sqlEl.style.display = 'block';
+                return;
+            }
+            allUsers = data;
+            renderUsers(allUsers);
+            document.getElementById('stat-total').textContent = allUsers.length;
+            document.getElementById('stat-admins').textContent = allUsers.filter(u => u.role === 'admin').length;
+        } catch (err) { console.error('Error:', err); }
+    }
+
+    window.deleteUser = async function(id) {
+        if (!confirm('¿Estás seguro de eliminar este usuario? Se borrará de Supabase Auth permanentemente.')) return;
+        try {
+            const res = await fetch(`/api/usuarios/${id}`, { method:'DELETE' });
+            if (res.ok) {
+                showAlert('✅ Usuario eliminado correctamente', 'success');
+                fetchUsuarios();
+            } else {
+                const err = await res.json();
+                showAlert('❌ Error: ' + err.error, 'error');
+            }
+        } catch(e) { console.error(e); }
+    };
+
+    window.changePassword = async function(id) {
+        const newPass = prompt('Ingresa la nueva contraseña para este usuario (mín. 6 caracteres):');
+        if (!newPass) return;
+        if (newPass.length < 6) {
+            showAlert('❌ La contraseña debe tener al menos 6 caracteres.', 'error');
+            return;
+        }
+        
+        try {
+            const res = await fetch(`/api/usuarios/${id}/password`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ newPassword: newPass })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showAlert('✅ ' + data.message, 'success');
+            } else {
+                showAlert('❌ ' + (data.error || 'Error al cambiar contraseña'), 'error');
+            }
+        } catch(e) { 
+            console.error(e);
+            showAlert('❌ Error de red', 'error'); 
+        }
+    };
+
+    searchInput.addEventListener('input', () => {
+        const q = searchInput.value.toLowerCase();
+        const filtered = allUsers.filter(u =>
+            (u.nombre||'').toLowerCase().includes(q) ||
+            (u.email||'').toLowerCase().includes(q) ||
+            (u.empresa_id||'').toLowerCase().includes(q)
+        );
+        renderUsers(filtered);
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ph ph-spinner"></i> Registrando...';
+        alertBox.className = 'alert';
+
+        const payload = {
+            empresa_nombre: document.getElementById('empresa_nombre').value,
+            empresa_id: document.getElementById('empresa_id').value,
+            correo_contador: document.getElementById('correo_contador').value.trim().toLowerCase(),
+            correo_auxiliar: document.getElementById('correo_auxiliar').value.trim().toLowerCase(),
+            password: document.getElementById('password').value
+        };
+
+        try {
+            const res = await fetch('/api/empresas', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                showAlert('✅ ' + data.message, 'success');
+                form.reset();
+                fetchUsuarios();
+            } else {
+                showAlert('❌ ' + (data.error || 'No se pudo crear'), 'error');
+            }
+        } catch (err) {
+            showAlert('❌ Error de conexión', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph ph-buildings"></i> Registrar Empresa y Usuarios';
+        }
+    });
+
+    fetchUsuarios();
+</script>
+</body>
+</html>

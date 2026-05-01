@@ -3,28 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Gastos — Dashboard</title>
+    <title>Expensify Hub - Dashboard</title>
     
-    <!-- Fonts: Instrument Serif & Geist Sans (fallback to Helvetica) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
     <style>
         :root {
-            --bg-canvas: #FBFBFA;
-            --bg-surface: #FFFFFF;
-            --border-color: #EAEAEA;
-            --text-main: #111111;
-            --text-muted: #787774;
-            --accent-pale-blue: #E1F3FE;
-            --accent-text-blue: #1F6C9F;
-            --accent-pale-green: #EDF3EC;
-            --accent-text-green: #346538;
-            --font-serif: "Instrument Serif", serif;
-            --font-sans: "Geist Sans", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
-            --font-mono: "Geist Mono", "SF Mono", monospace;
+            --bg-body: #f4f7f6;
+            --bg-sidebar: #ffffff;
+            --bg-main: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --primary-blue: #0f62fe;
+            --sidebar-active-bg: #e0f2fe;
+            --sidebar-active-text: #0284c7;
+            
+            --card-header-bg: #f1f5f9;
+            --card-border: #e2e8f0;
+            
+            --green-text: #16a34a;
+            --green-bg: #dcfce7;
+            --red-text: #dc2626;
+            --red-bg: #fee2e2;
+            
+            --font-main: 'Inter', sans-serif;
         }
 
         * {
@@ -35,288 +41,973 @@
         }
 
         body {
-            background-color: var(--bg-canvas);
+            background-color: var(--bg-body);
             color: var(--text-main);
-            font-family: var(--font-sans);
-            line-height: 1.6;
-            overflow-x: hidden;
+            font-family: var(--font-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
         }
 
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 80px 24px;
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 0;
+            flex-shrink: 0;
+            z-index: 10;
         }
 
-        /* Header Editorial */
-        header {
-            margin-bottom: 64px;
-            opacity: 0;
-            transform: translateY(12px);
-            animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        h1 {
-            font-family: var(--font-serif);
-            font-size: 56px;
-            font-weight: 400;
-            line-height: 1.1;
-            letter-spacing: -0.03em;
-            margin-bottom: 8px;
-        }
-
-        .subtitle {
-            color: var(--text-muted);
-            font-size: 18px;
-            max-width: 600px;
-        }
-
-        /* Bento Grid */
-        .bento-grid {
-            display: grid;
-            grid-template-columns: repeat(12, 1fr);
-            gap: 20px;
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 24px;
             margin-bottom: 40px;
+            font-weight: 700;
+            font-size: 20px;
+            color: var(--text-main);
         }
 
-        .card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 32px;
+        .logo i {
+            color: #0ea5e9;
+            font-size: 28px;
+        }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 0 12px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            text-decoration: none;
+            color: var(--text-main);
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .nav-item i {
+            font-size: 20px;
+            color: var(--text-muted);
+        }
+
+        .nav-item:hover {
+            background-color: #f8fafc;
+        }
+
+        .nav-item.active {
+            background-color: var(--sidebar-active-bg);
+            color: var(--sidebar-active-text);
+        }
+
+        .nav-item.active i {
+            color: var(--sidebar-active-text);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-main);
+            overflow-y: auto;
+        }
+
+        /* Header */
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 32px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .top-header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .icon-btn {
             position: relative;
-            transition: box-shadow 0.2s ease, transform 0.2s ease;
-            opacity: 0;
-            transform: translateY(12px);
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .card:hover {
-            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-            transform: translateY(-2px);
+        .icon-btn .badge {
+            position: absolute;
+            top: -4px;
+            right: -6px;
+            background-color: var(--red-text);
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid white;
+        }
+
+        .avatar-dropdown {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            background-color: #e2e8f0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-size: 24px;
+            overflow: hidden;
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar-dropdown i {
+            font-size: 16px;
+            color: var(--text-muted);
+        }
+
+        /* User dropdown menu */
+        .dropdown-menu {
+            position: absolute;
+            top: 56px;
+            right: 0;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            width: 220px;
+            z-index: 100;
+            overflow: hidden;
+            display: none;
+        }
+
+        .dropdown-menu.open {
+            display: block;
+            animation: fadeInDown 0.15s ease;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .dropdown-user-info {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .dropdown-user-info .name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .dropdown-user-info .role {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            font-size: 14px;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: background 0.15s;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-family: var(--font-main);
+        }
+
+        .dropdown-item:hover {
+            background-color: #f8fafc;
+        }
+
+        .dropdown-item.danger {
+            color: var(--red-text);
+        }
+
+        .dropdown-item.danger:hover {
+            background-color: var(--red-bg);
+        }
+
+        /* Dashboard Content Container */
+        .dashboard-content {
+            padding: 32px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background-color: #fff;
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .stat-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .stat-value-container {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            min-height: 40px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .stat-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .stat-badge.green {
+            background-color: var(--green-bg);
+            color: var(--green-text);
+        }
+
+        .alert-card {
+            background-color: #fffaf9;
+            border-color: #fed7d7;
+        }
+
+        .text-red { color: var(--red-text); }
+        .text-green { color: var(--green-text); }
+        .text-blue { color: var(--sidebar-active-text); }
+
+        /* Content Grid */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 24px;
+        }
+
+        /* Cards Generic */
+        .card {
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            background-color: #fff;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .card-header {
+            background-color: var(--card-header-bg);
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--card-border);
         }
 
         .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        /* Left Column - Invoice Image */
+        .latest-invoice-card {
+            height: 100%;
+        }
+
+        .invoice-image-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f8fafc;
+            padding: 30px;
+            flex: 1;
+        }
+
+        .invoice-image {
+            max-width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            background-color: white;
+            padding: 10px;
+        }
+
+        .card-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .sender-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sender-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+        
+        .sender-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .sender-details {
+            display: flex;
+            flex-direction: column;
             font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
             color: var(--text-muted);
-            margin-bottom: 24px;
+        }
+
+        .sender-details strong {
+            color: var(--text-main);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .receive-date {
+            margin-left: auto;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .original-source {
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            padding-top: 8px;
+        }
+
+        /* Right Column */
+        .right-col {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Extracted Data */
+        .extracted-data {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .data-row {
+            display: flex;
+        }
+
+        .data-label {
+            width: 130px;
+            font-weight: 600;
+            color: var(--text-main);
+            flex-shrink: 0;
+        }
+
+        .data-value {
+            color: var(--text-muted);
+        }
+
+        .data-value.text-green {
+            color: var(--green-text);
+            font-weight: 600;
+        }
+
+        /* Validation Status */
+        .validation-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .validation-checks {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .check-item {
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        /* WhatsApp Sync Card */
-        .card-wa { grid-column: span 5; }
-        
-        .wa-status {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 240px;
-            text-align: center;
-        }
-
-        #qr-container {
-            width: 220px;
-            height: 220px;
-            background: #f9f9f9;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
+        .check-result {
             display: flex;
             align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        #qr-image {
-            max-width: 90%;
-            height: auto;
+            gap: 4px;
+            color: var(--green-text);
         }
 
         .status-badge {
-            padding: 4px 12px;
-            border-radius: 9999px;
-            font-size: 11px;
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 13px;
             font-weight: 600;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            margin-top: 16px;
+            display: inline-block;
         }
 
-        .status-badge.conectado { background: var(--accent-pale-green); color: var(--accent-text-green); }
-        .status-badge.esperando { background: var(--accent-pale-blue); color: var(--accent-text-blue); }
-        .status-badge.desconectado { background: #f5f5f5; color: #666; }
+        .status-badge.validada {
+            background-color: var(--green-bg);
+            color: var(--green-text);
+            font-size: 14px;
+            padding: 8px 20px;
+        }
 
-        /* Stats Card */
-        .card-stats { grid-column: span 7; display: flex; flex-direction: column; gap: 32px; }
-        
-        .stat-group { display: flex; gap: 48px; }
-        
-        .stat-item .label { font-size: 14px; color: var(--text-muted); margin-bottom: 8px; }
-        .stat-item .value { font-family: var(--font-serif); font-size: 40px; line-height: 1; }
+        .status-badge.procesada {
+            background-color: var(--green-bg);
+            color: var(--green-text);
+        }
 
-        /* Historial Card */
-        .card-history { grid-column: span 12; padding: 0; overflow: hidden; }
-        .card-history .card-title { padding: 32px 32px 16px; margin: 0; }
+        /* History Table */
+        .history-card .table-container {
+            padding: 0;
+            overflow-x: auto;
+        }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         th {
             text-align: left;
-            padding: 16px 32px;
-            border-bottom: 1px solid var(--border-color);
-            color: var(--text-muted);
-            font-weight: 500;
-            background: #fafafa;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--card-border);
+            color: var(--text-main);
+            font-weight: 600;
+            background-color: #f8fafc;
+            white-space: nowrap;
         }
 
         td {
-            padding: 20px 32px;
-            border-bottom: 1px solid var(--border-color);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--card-border);
             vertical-align: middle;
+            color: var(--text-muted);
         }
 
-        tr:last-child td { border-bottom: none; }
-        tr:hover td { background: #fcfcfc; }
-
-        .monto { font-weight: 600; text-align: right; }
-        .tag {
-            display: inline-block;
-            padding: 2px 10px;
-            border-radius: 4px;
-            font-size: 11px;
-            background: #F7F6F3;
-            color: #555;
-            text-transform: capitalize;
-        }
-
-        .btn-view {
+        td strong {
             color: var(--text-main);
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 13px;
             font-weight: 500;
         }
 
-        .btn-view:hover { text-decoration: underline; }
+        tr:last-child td {
+            border-bottom: none;
+        }
 
-        /* Logout button */
-        .logout-btn {
-            position: absolute;
-            top: 32px;
-            right: 24px;
-            background: #111;
-            color: #fff;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 13px;
+        .docs-icons {
+            display: flex;
+            gap: 12px;
+            font-size: 20px;
+        }
+        
+        .docs-icons i {
             cursor: pointer;
-            transition: opacity 0.2s;
+        }
+        
+        /* WhatsApp QR Card */
+        .whatsapp-card {
+            background: linear-gradient(135deg, #1a2e1a 0%, #0f1a0f 100%);
+            border: 1px solid #2d4a2d;
+            border-radius: 12px;
+            padding: 28px;
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .whatsapp-card::before {
+            content: '';
+            position: absolute;
+            top: -60px; right: -60px;
+            width: 200px; height: 200px;
+            background: radial-gradient(circle, rgba(37,211,102,.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+        .wa-qr-box {
+            width: 200px; height: 200px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,.3);
+            overflow: hidden;
+        }
+        .wa-qr-box img {
+            width: 100%; height: 100%;
+            object-fit: contain;
+        }
+        .wa-info { flex: 1; z-index: 1; }
+        .wa-info h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #25d366;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .wa-info p {
+            font-size: 14px;
+            color: #8cbf8c;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+        .wa-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .wa-status.waiting {
+            background: rgba(245,158,11,.15);
+            color: #f59e0b;
+        }
+        .wa-status.connected {
+            background: rgba(34,197,94,.15);
+            color: #22c55e;
+        }
+        .wa-status.disconnected {
+            background: rgba(239,68,68,.15);
+            color: #ef4444;
+        }
+        .wa-pulse {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        .wa-pulse.waiting { background: #f59e0b; }
+        .wa-pulse.connected { background: #22c55e; }
+        .wa-pulse.disconnected { background: #ef4444; }
+        @keyframes pulse {
+            0%,100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .5; transform: scale(1.3); }
+        }
+        .wa-steps {
+            display: flex; flex-direction: column; gap: 8px; margin-top: 12px;
+        }
+        .wa-step {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 13px; color: #8cbf8c;
+        }
+        .wa-step-num {
+            width: 22px; height: 22px;
+            background: rgba(37,211,102,.2);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700; color: #25d366;
         }
 
-        .logout-btn:hover { opacity: 0.8; }
-
-        /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(12px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .reveal { animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
-        @media (max-width: 768px) {
-            .card-wa, .card-stats { grid-column: span 12; }
-            h1 { font-size: 40px; }
+        @media (max-width: 1024px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .whatsapp-card {
+                flex-direction: column;
+                text-align: center;
+            }
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <button id="logout-btn" class="logout-btn">Cerrar Sesión</button>
-        
-        <header>
-            <h1>Gestión de Gastos</h1>
-            <p class="subtitle">Análisis automático de facturas mediante IA y WhatsApp. Envía tus tickets y fotos para procesarlos en tiempo real.</p>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo">
+            <i class="ph-fill ph-receipt"></i>
+            <span class="logo-text">Expensify Hub</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/" class="nav-item active">
+                <i class="ph ph-house"></i> Resumen
+            </a>
+            <a href="#" class="nav-item">
+                <i class="ph ph-file-text"></i> Facturas
+            </a>
+            <a href="#" class="nav-item">
+                <i class="ph ph-chart-line-up"></i> Reportes
+            </a>
+            <a href="#" class="nav-item">
+                <i class="ph ph-users"></i> Empleados
+            </a>
+            <a href="/usuarios" class="nav-item" id="nav-usuarios" style="display: none;">
+                <i class="ph ph-buildings"></i> Gestión Clientes
+            </a>
+            <a href="#" class="nav-item">
+                <i class="ph ph-gear"></i> Configuración
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="top-header">
+            <h1>Dashboard - Recepción de Facturas Electrónicas</h1>
+            <div class="header-actions">
+                <div class="icon-btn notification">
+                    <i class="ph ph-bell"></i>
+                    <span class="badge">5</span>
+                </div>
+                <div class="icon-btn">
+                    <i class="ph ph-question"></i>
+                </div>
+                <div class="avatar-dropdown" id="user-menu-trigger" style="position:relative; cursor:pointer;">
+                    <div class="avatar">
+                        <i class="ph-fill ph-user"></i>
+                    </div>
+                    <span id="user-name-display" style="font-size:14px;font-weight:600;color:var(--text-main);margin-left:6px;"></span>
+                    <i class="ph ph-caret-down"></i>
+                    <div class="dropdown-menu" id="user-dropdown">
+                        <div class="dropdown-user-info">
+                            <div class="name" id="dropdown-name">Cargando...</div>
+                            <div class="role" id="dropdown-role">-</div>
+                        </div>
+                        <button class="dropdown-item" onclick="cambiarMiPassword()">
+                            <i class="ph ph-key"></i>
+                            Cambiar Clave
+                        </button>
+                        <button class="dropdown-item danger" id="btn-cerrar-sesion">
+                            <i class="ph ph-sign-out"></i>
+                            Cerrar Sesión
+                        </button>
+                    </div>
+                </div>
+            </div>
         </header>
 
-        <div class="bento-grid">
-            <!-- WhatsApp Connection -->
-            <div class="card card-wa reveal" style="animation-delay: 0.1s">
-                <div class="card-title">
-                    <i class="ph-bold ph-whatsapp-logo"></i> Sincronización
-                </div>
-                <div class="wa-status">
-                    <div id="qr-container">
-                        <div id="wa-loader">Conectando...</div>
-                        <img id="qr-image" style="display:none">
+        <!-- Dashboard Content -->
+        <div class="dashboard-content">
+            <!-- Stats Row -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-title">Facturas Procesadas (Total)</div>
+                    <div class="stat-value-container">
+                        <span class="stat-value" id="stat-count">—</span>
+                        <span class="stat-badge green" id="stat-ok-pct" style="display:none;"></span>
                     </div>
-                    <div id="wa-status-badge" class="status-badge desconectado">Desconectado</div>
-                    <p id="wa-msg" style="margin-top:16px; font-size:13px; color:var(--text-muted)">
-                        Iniciando sistema...
-                    </p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Por Validar / Pendientes</div>
+                    <div class="stat-value-container">
+                        <span class="stat-value" id="stat-pendientes">—</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Sincronizadas con ERP</div>
+                    <div class="stat-value-container">
+                        <span class="stat-value" id="stat-sincronizadas">—</span>
+                    </div>
+                </div>
+                <div class="stat-card alert-card">
+                    <div class="stat-title text-red">Rechazadas</div>
+                    <div class="stat-value-container" style="justify-content: space-between;">
+                        <span class="stat-value text-red" id="stat-rechazadas">—</span>
+                        <i class="ph-fill ph-warning text-red" style="font-size: 28px;"></i>
+                    </div>
                 </div>
             </div>
 
-            <!-- Stats -->
-            <div class="card card-stats reveal" style="animation-delay: 0.2s">
-                <div class="card-title">
-                    <i class="ph-bold ph-chart-line-up"></i> Resumen Contable
-                </div>
-                <div class="stat-group">
-                    <div class="stat-item">
-                        <p class="label">Total Gastado (COP)</p>
-                        <p class="value" id="stat-total">$ 0</p>
-                    </div>
-                    <div class="stat-item">
-                        <p class="label">Facturas Procesadas</p>
-                        <p class="value" id="stat-count">0</p>
+            <!-- WhatsApp Connection Card -->
+            <div class="whatsapp-card" id="wa-card">
+                <div class="wa-qr-box" id="wa-qr-box">
+                    <div style="text-align:center;padding:20px;">
+                        <i class="ph ph-whatsapp-logo" style="font-size:48px;color:#25d366;"></i>
+                        <p style="font-size:12px;color:#666;margin-top:8px;">Cargando...</p>
                     </div>
                 </div>
-                <div style="margin-top: auto;">
-                    <p style="font-size: 13px; color: var(--text-muted); font-style: italic;">
-                        * Los datos se actualizan automáticamente al recibir un mensaje en WhatsApp.
-                    </p>
+                <div class="wa-info">
+                    <h3><i class="ph-fill ph-whatsapp-logo"></i> Vincula tu WhatsApp</h3>
+                    <p>Conecta tu cuenta de WhatsApp para recibir y consolidar facturas automáticamente en este dashboard. La IA de Gemini extraerá los datos de cada factura que envíes.</p>
+                    <div id="wa-status-badge"><span class="wa-status disconnected"><span class="wa-pulse disconnected"></span> Desconectado</span></div>
+                    <div class="wa-steps" id="wa-steps">
+                        <div class="wa-step"><span class="wa-step-num">1</span> Abre WhatsApp en tu celular</div>
+                        <div class="wa-step"><span class="wa-step-num">2</span> Ve a Ajustes → Dispositivos vinculados</div>
+                        <div class="wa-step"><span class="wa-step-num">3</span> Escanea el código QR que aparece aquí</div>
+                    </div>
+                    <div style="margin-top:14px;" id="wa-actions">
+                        <button id="btn-wa-reconnect" onclick="reconectarWhatsApp()" style="display:none;padding:8px 18px;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.25);border-radius:8px;font-family:var(--font-family);font-size:13px;font-weight:600;cursor:pointer;">
+                            <i class="ph ph-arrows-clockwise"></i> Desvincular y Generar Nuevo QR
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- History -->
-            <div class="card card-history reveal" style="animation-delay: 0.3s">
-                <div class="card-title">
-                    <i class="ph-bold ph-clock-counter-clockwise"></i> Historial Reciente
+            <!-- Content Grid -->
+            <div class="content-grid">
+                <!-- Left Column -->
+                <div class="left-col">
+                    <div class="card latest-invoice-card">
+                        <div class="card-header">
+                            <h2 class="card-title">Última Factura Recibida</h2>
+                        </div>
+                        <div class="card-body invoice-image-container" id="invoice-img-container">
+                            <div id="no-invoice-placeholder" style="text-align:center; color:var(--text-muted);">
+                                <i class="ph ph-file-dashed" style="font-size:64px; color:#cbd5e1;"></i>
+                                <p style="margin-top:12px; font-size:14px;">Aún no hay facturas recibidas.<br>Envía una foto de factura por WhatsApp.</p>
+                            </div>
+                            <img src="" alt="Última Factura" class="invoice-image" id="latest-invoice-img" style="display:none;">
+                        </div>
+                        <div class="card-footer">
+                            <div class="sender-info">
+                                <div class="sender-avatar">
+                                    <i class="ph-fill ph-user-circle" style="font-size: 36px; color: #cbd5e1;"></i>
+                                </div>
+                                <div class="sender-details">
+                                    Recibida el<br>
+                                    <strong id="latest-invoice-sender">—</strong>
+                                </div>
+                                <div class="receive-date" id="latest-invoice-date">—</div>
+                            </div>
+                            <div class="original-source" id="latest-invoice-source" style="color:var(--text-muted)">
+                                Sin facturas registradas
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div style="overflow-x: auto;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Proveedor</th>
-                                <th>Categoría</th>
-                                <th>Concepto</th>
-                                <th style="text-align:right">Importe</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="facturas-body">
-                            <!-- Inyectado vía JS -->
-                        </tbody>
-                    </table>
+
+                <!-- Right Column -->
+                <div class="right-col">
+                    <!-- Extracted Data Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Datos Extraídos por Google AI</h2>
+                        </div>
+                        <div class="card-body extracted-data" id="extracted-data-body">
+                            <div id="no-data-placeholder" style="text-align:center; color:var(--text-muted); padding:20px 0;">
+                                <i class="ph ph-robot" style="font-size:40px; color:#cbd5e1;"></i>
+                                <p style="margin-top:8px; font-size:13px;">Los datos extraídos por IA<br>aparecerán aquí cuando llegue una factura.</p>
+                            </div>
+                            <div id="extracted-data-fields" style="display:none;">
+                                <div class="data-row"><span class="data-label">Proveedor:</span> <span class="data-value" id="data-proveedor">—</span></div>
+                                <div class="data-row"><span class="data-label">Fecha Emisión:</span> <span class="data-value" id="data-fecha">—</span></div>
+                                <div class="data-row"><span class="data-label">Total:</span> <span class="data-value" id="data-total">—</span></div>
+                                <div class="data-row"><span class="data-label">IVA (estimado 19%):</span> <span class="data-value" id="data-iva">—</span></div>
+                                <div class="data-row"><span class="data-label">Subtotal:</span> <span class="data-value" id="data-subtotal">—</span></div>
+                                <div class="data-row"><span class="data-label">Estado:</span> <span class="data-value" id="data-estado">—</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Validation Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Estado de la Validación</h2>
+                        </div>
+                        <div class="card-body validation-status" id="validation-card-body">
+                            <div id="validation-placeholder" style="text-align:center; color:var(--text-muted); padding:20px 0; width:100%;">
+                                <i class="ph ph-shield-slash" style="font-size:40px; color:#cbd5e1;"></i>
+                                <p style="margin-top:8px; font-size:13px;">Estado de validación disponible<br>al recibir la primera factura.</p>
+                            </div>
+                            <div id="validation-fields" style="display:none; width:100%;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <div class="validation-checks">
+                                        <div class="check-item">Proveedor detectado: <span class="check-result" id="val-proveedor"></span></div>
+                                        <div class="check-item">Fecha registrada: <span class="check-result" id="val-fecha"></span></div>
+                                        <div class="check-item">Monto registrado: <span class="check-result" id="val-monto"></span></div>
+                                    </div>
+                                    <div class="validation-badge-container">
+                                        <span class="status-badge" id="val-badge">—</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- History Table Card -->
+                    <div class="card history-card">
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <h2 class="card-title">Facturas</h2>
+                            <div class="tabs" style="display: flex; gap: 8px;">
+                                <button onclick="setTab('pendientes')" id="tab-pendientes" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--sidebar-active-bg); color: var(--sidebar-active-text); font-family: var(--font-main); font-weight: 600; cursor: pointer;">Pendientes</button>
+                                <button onclick="setTab('historial')" id="tab-historial" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: white; color: var(--text-muted); font-family: var(--font-main); font-weight: 600; cursor: pointer;">Historial (ERP)</button>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Empleado</th>
+                                        <th>Fecha<br>Recibo</th>
+                                        <th>Proveedor</th>
+                                        <th>Total<br>(COP)</th>
+                                        <th>Estado</th>
+                                        <th style="text-align: center;">Documentos</th>
+                                        <th style="text-align: center;">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="facturas-body">
+                                    <tr id="empty-row">
+                                        <td colspan="8" style="text-align:center; padding:32px; color:var(--text-muted);">
+                                            <i class="ph ph-hourglass" style="font-size:32px;"></i>
+                                            <p style="margin-top:8px;">No hay facturas en esta sección aún.</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <script>
+        // ─── Autenticación JWT ────────────────────────────────────────────────
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+            window.location.replace('/login.html');
+        }
+
+        // Mostrar info del usuario en el header
+        const authUser = JSON.parse(localStorage.getItem('auth_user') || '{}');
+        if (authUser.nombre) {
+            document.getElementById('user-name-display').textContent = authUser.nombre;
+            document.getElementById('dropdown-name').textContent = authUser.nombre;
+            document.getElementById('dropdown-role').textContent =
+                authUser.rol === 'admin' ? 'Administrador' : (authUser.rol === 'contador' ? 'Contador' : 'Empleado');
+                
+            if (authUser.rol === 'admin') {
+                document.getElementById('nav-usuarios').style.display = 'flex';
+            }
+        }
+
+        // Toggle dropdown de usuario
+        document.getElementById('user-menu-trigger').addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('user-dropdown').classList.toggle('open');
+        });
+        document.addEventListener('click', () => {
+            document.getElementById('user-dropdown').classList.remove('open');
+        });
+
+        // Cerrar sesión
+        document.getElementById('btn-cerrar-sesion').addEventListener('click', async () => {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_user');
+            try {
+                await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+            } catch(e) {}
+            window.location.replace('/login.html');
+        });
+
+        // Cambiar propia contraseña
+        window.cambiarMiPassword = async function() {
+            const newPass = prompt('Ingresa tu nueva contraseña (mínimo 6 caracteres):');
+            if (!newPass) return;
+            if (newPass.length < 6) return alert('La contraseña debe tener al menos 6 caracteres.');
+
+            try {
+                const res = await fetch('/api/perfil/password', {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    },
+                    body: JSON.stringify({ newPassword: newPass })
+                });
+                const data = await res.json();
+                if (res.ok) alert('✅ ' + data.message);
+                else alert('❌ ' + data.error);
+            } catch(e) { alert('❌ Error de red'); }
+        };
+
+        // Agregar el token a todas las peticiones fetch
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options = {}) {
+            options.headers = options.headers || {};
+            if (token) options.headers['Authorization'] = `Bearer ${token}`;
+            return originalFetch(url, options);
+        };
+
+        // ─── WebSocket y datos ──────────────────────────────────────────────────
         let ws;
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}`;
@@ -330,12 +1021,12 @@
                 console.log('Evento WS:', type, data);
 
                 if (type === 'estado_inicial') {
-                    updateWA(data.estado, data.qr);
-                    updateTable(data.facturas);
-                } else if (type === 'estado_conexion') {
-                    updateWA(data.estado, data.qr);
+                    fetchFacturas();
+                    if (data) updateWhatsAppUI(data.estado, data.qr);
                 } else if (type === 'nueva_factura') {
-                    fetchFacturas(); // Recargar todo para actualizar stats
+                    fetchFacturas();
+                } else if (type === 'qr_update') {
+                    updateWhatsAppUI(data.estado, data.qr);
                 }
             };
 
@@ -345,39 +1036,27 @@
             };
         }
 
-        function updateWA(estado, qr) {
-            const img = document.getElementById('qr-image');
-            const loader = document.getElementById('wa-loader');
-            const badge = document.getElementById('wa-status-badge');
-            const msg = document.getElementById('wa-msg');
+        let currentTab = 'pendientes';
+        let allFacturas = [];
 
-            badge.className = `status-badge ${estado}`;
-            
-            if (estado === 'conectado') {
-                badge.innerText = 'Conectado';
-                msg.innerText = 'WhatsApp activo y escuchando facturas.';
-                img.style.display = 'none';
-                loader.innerHTML = '<i class="ph-bold ph-check-circle" style="font-size:48px; color:var(--accent-text-green)"></i>';
-                loader.style.display = 'block';
-            } else if (estado === 'esperando_qr' && qr) {
-                badge.innerText = 'Esperando QR';
-                msg.innerText = 'Escanea el código con tu WhatsApp.';
-                img.src = qr;
-                img.style.display = 'block';
-                loader.style.display = 'none';
-            } else {
-                badge.innerText = 'Desconectado';
-                msg.innerText = 'Iniciando conexión con WhatsApp...';
-                img.style.display = 'none';
-                loader.style.display = 'block';
-            }
+        function setTab(tab) {
+            currentTab = tab;
+            document.getElementById('tab-pendientes').style.background = tab === 'pendientes' ? 'var(--sidebar-active-bg)' : 'white';
+            document.getElementById('tab-pendientes').style.color = tab === 'pendientes' ? 'var(--sidebar-active-text)' : 'var(--text-muted)';
+            document.getElementById('tab-historial').style.background = tab === 'historial' ? 'var(--sidebar-active-bg)' : 'white';
+            document.getElementById('tab-historial').style.color = tab === 'historial' ? 'var(--sidebar-active-text)' : 'var(--text-muted)';
+            updateTable(allFacturas);
         }
 
         async function fetchFacturas() {
             try {
-                const res = await fetch('/api/facturas');
-                const data = await res.json();
-                updateTable(data);
+                const res = await fetch('/api/facturas', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) {
+                    allFacturas = await res.json();
+                    updateTable(allFacturas);
+                }
             } catch (err) {
                 console.error('Error cargando facturas:', err);
             }
@@ -385,42 +1064,261 @@
 
         function updateTable(facturas) {
             const body = document.getElementById('facturas-body');
-            const statTotal = document.getElementById('stat-total');
             const statCount = document.getElementById('stat-count');
-
+            
             body.innerHTML = '';
-            let total = 0;
+            
+            // Filter by tab
+            const filtered = facturas.filter(f => {
+                if (currentTab === 'pendientes') return f.estado !== 'Sincronizado';
+                return f.estado === 'Sincronizado';
+            });
 
-            facturas.forEach(f => {
-                total += f.importe_total || 0;
+            // Revert array to show newest first
+            const displayFacturas = [...filtered].reverse();
+
+            displayFacturas.forEach((f, idx) => {
                 const row = document.createElement('tr');
                 const fecha = f.fecha_factura ? new Date(f.fecha_factura).toLocaleDateString('es-ES') : '—';
+                const id = f.id;
+                const isAdminOrContador = authUser.rol === 'admin' || authUser.rol === 'contador';
+                
+                const options = ['Nuevo', 'Revisado', 'Aprobado', 'Rechazado', 'Sincronizado'];
+                const estadoSelect = `
+                    <select onchange="cambiarEstado('${id}', this.value)" style="padding: 6px; border-radius: 6px; border: 1px solid var(--border-color); font-family: var(--font-main);" ${!isAdminOrContador ? 'disabled' : ''}>
+                        ${options.map(o => `<option value="${o}" ${(f.estado || 'Nuevo') === o ? 'selected' : ''}>${o}</option>`).join('')}
+                    </select>
+                `;
+                
+                let actionBtn = '';
+                if (isAdminOrContador) {
+                    if (f.estado !== 'Sincronizado') {
+                        actionBtn = `<button onclick="subirERP('${id}')" style="padding: 6px 12px; background: var(--primary-blue); color: white; border: none; border-radius: 6px; cursor: pointer; font-family: var(--font-main); font-weight: 500; display: flex; align-items: center; gap: 4px;"><i class="ph ph-cloud-arrow-up"></i> Subir ERP</button>`;
+                    } else {
+                        actionBtn = '<span style="color:var(--green-text); font-weight: 600; font-size: 12px;"><i class="ph ph-check-circle"></i> Sincronizado</span>';
+                    }
+                } else {
+                    actionBtn = '<span style="color:var(--text-muted); font-size: 12px;">Sin permisos</span>';
+                }
                 
                 row.innerHTML = `
-                    <td style="color:var(--text-muted)">${fecha}</td>
-                    <td style="font-weight:500">${f.proveedor || 'Desconocido'}</td>
-                    <td><span class="tag">${f.categoria || 'Otro'}</span></td>
-                    <td style="color:var(--text-muted); font-size:13px">${f.concepto || ''}</td>
-                    <td class="monto">$ ${Number(f.importe_total || 0).toLocaleString('es-CO')}</td>
-                    <td style="text-align:right">
-                        ${f.archivo ? `<a href="${f.archivo}" target="_blank" class="btn-view"><i class="ph-bold ph-eye"></i></a>` : ''}
+                    <td style="font-size:12px; color:var(--text-muted); max-width: 80px; overflow:hidden; text-overflow: ellipsis;" title="${id}">${typeof id === 'string' ? id.split('-')[0] : id}</td>
+                    <td>${f.remitente || authUser.nombre || '—'}</td>
+                    <td>${fecha}</td>
+                    <td>${f.proveedor || 'Desconocido'}</td>
+                    <td>$ ${Number(f.importe_total || 0).toLocaleString('es-CO')}</td>
+                    <td>${estadoSelect}</td>
+                    <td class="docs-icons" style="justify-content: center;">
+                        ${f.archivo ? `<a href="${f.archivo}" target="_blank"><i class="ph ph-image text-blue"></i></a>` : '<i class="ph ph-image text-blue"></i>'}
+                        <i class="ph ph-file-pdf text-red"></i>
+                    </td>
+                    <td style="text-align: center;">
+                        ${actionBtn}
                     </td>
                 `;
                 body.appendChild(row);
             });
+            
+            // ── Actualizar tarjetas de estadísticas con datos reales ──
+            const total = facturas.length;
+            const sincronizadas = facturas.filter(f => f.estado === 'Sincronizado').length;
+            const rechazadas = facturas.filter(f => f.estado === 'Rechazado').length;
+            const pendientes = facturas.filter(f => f.estado !== 'Sincronizado' && f.estado !== 'Rechazado').length;
+            const okPct = total > 0 ? Math.round(((total - rechazadas) / total) * 100) : 0;
 
-            statTotal.innerText = `$ ${total.toLocaleString('es-CO')}`;
-            statCount.innerText = facturas.length;
+            statCount.innerText = total;
+            document.getElementById('stat-pendientes').innerText = pendientes;
+            document.getElementById('stat-sincronizadas').innerText = sincronizadas;
+            document.getElementById('stat-rechazadas').innerText = rechazadas;
+
+            if (total > 0) {
+                const badge = document.getElementById('stat-ok-pct');
+                badge.style.display = 'inline-block';
+                badge.textContent = okPct + '% OK';
+            }
+
+            // ── Empty state en tabla ──
+            const emptyRow = document.getElementById('empty-row');
+            if (emptyRow) emptyRow.style.display = filtered.length === 0 ? '' : 'none';
+
+            // Global functions
+            window.cambiarEstado = async function(id, estado) {
+                try {
+                    await fetch('/api/facturas/' + id + '/estado', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify({ estado })
+                    });
+                    // Refresh data
+                    fetchFacturas();
+                } catch (e) {
+                    console.error(e);
+                }
+            };
+
+            window.subirERP = async function(id) {
+                if (!confirm('¿Estás seguro de subir esta factura al ERP?')) return;
+                
+                try {
+                    // TODO: Conectar con API de ERP aquí
+                    console.log('Iniciando sincronización con ERP para factura:', id);
+                    
+                    const response = await fetch('/api/facturas/' + id + '/estado', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify({ estado: 'Sincronizado' })
+                    });
+
+                    if (response.ok) {
+                        alert('✅ Factura sincronizada correctamente con el ERP.');
+                        fetchFacturas();
+                    } else {
+                        alert('❌ Error al sincronizar con el ERP.');
+                    }
+                } catch (err) {
+                    console.error('Error ERP:', err);
+                    alert('❌ Error de conexión al subir al ERP.');
+                }
+            };
+
+            // ── Actualizar tarjeta de última factura y datos extraídos ──
+            if (facturas.length > 0) {
+                const latest = facturas[facturas.length - 1];
+
+                // Imagen
+                const imgEl = document.getElementById('latest-invoice-img');
+                const placeholder = document.getElementById('no-invoice-placeholder');
+                if (latest.archivo) {
+                    imgEl.src = latest.archivo;
+                    imgEl.style.display = 'block';
+                    placeholder.style.display = 'none';
+                } else {
+                    imgEl.style.display = 'none';
+                    placeholder.style.display = 'block';
+                }
+
+                // Fecha y fuente
+                const fechaRecibida = latest.created_at
+                    ? new Date(latest.created_at).toLocaleString('es-ES')
+                    : (latest.fecha_factura ? new Date(latest.fecha_factura).toLocaleString('es-ES') : '—');
+                document.getElementById('latest-invoice-date').innerText = fechaRecibida;
+                document.getElementById('latest-invoice-sender').innerText = latest.proveedor || 'Proveedor desconocido';
+                document.getElementById('latest-invoice-source').innerText = 'Recibida vía WhatsApp';
+
+                // Datos extraídos
+                document.getElementById('no-data-placeholder').style.display = 'none';
+                document.getElementById('extracted-data-fields').style.display = 'block';
+
+                document.getElementById('data-proveedor').innerText = latest.proveedor || 'Desconocido';
+                document.getElementById('data-fecha').innerText = latest.fecha_factura
+                    ? new Date(latest.fecha_factura).toLocaleDateString('es-ES')
+                    : '—';
+                document.getElementById('data-total').innerText = `$ ${Number(latest.importe_total || 0).toLocaleString('es-CO')} (COP)`;
+
+                const iva = (latest.importe_total || 0) * 0.19 / 1.19;
+                const sub = (latest.importe_total || 0) - iva;
+                document.getElementById('data-iva').innerText = `$ ${Math.round(iva).toLocaleString('es-CO')}`;
+                document.getElementById('data-subtotal').innerText = `$ ${Math.round(sub).toLocaleString('es-CO')}`;
+                document.getElementById('data-estado').innerText = latest.estado || 'Nuevo';
+
+                // ── Tarjeta de validación dinámica ──
+                document.getElementById('validation-placeholder').style.display = 'none';
+                document.getElementById('validation-fields').style.display = 'block';
+
+                const chkOk = (ok) => ok
+                    ? `<span class="check-result">[SI] <i class="ph-bold ph-check text-green"></i></span>`
+                    : `<span style="color:var(--red-text);">[NO] <i class="ph-bold ph-x" style="color:var(--red-text);"></i></span>`;
+
+                document.getElementById('val-proveedor').innerHTML = chkOk(!!latest.proveedor);
+                document.getElementById('val-fecha').innerHTML = chkOk(!!latest.fecha_factura);
+                document.getElementById('val-monto').innerHTML = chkOk(!!(latest.importe_total > 0));
+
+                const badge = document.getElementById('val-badge');
+                const estado = (latest.estado || 'Nuevo').toLowerCase();
+                badge.textContent = latest.estado || 'Nuevo';
+                badge.className = 'status-badge';
+                if (estado === 'sincronizado' || estado === 'aprobado') {
+                    badge.classList.add('validada');
+                } else if (estado === 'rechazado') {
+                    badge.style.background = 'var(--red-bg)'; badge.style.color = 'var(--red-text)';
+                } else {
+                    badge.style.background = '#fef9c3'; badge.style.color = '#a16207';
+                }
+            } else {
+                // Sin facturas: asegurar estado vacío
+                document.getElementById('latest-invoice-img').style.display = 'none';
+                document.getElementById('no-invoice-placeholder').style.display = 'block';
+                document.getElementById('no-data-placeholder').style.display = 'block';
+                document.getElementById('extracted-data-fields').style.display = 'none';
+                document.getElementById('latest-invoice-source').innerText = 'Sin facturas registradas';
+                document.getElementById('latest-invoice-date').innerText = '—';
+                document.getElementById('latest-invoice-sender').innerText = '—';
+                // Reset validación
+                document.getElementById('validation-placeholder').style.display = 'block';
+                document.getElementById('validation-fields').style.display = 'none';
+            }
         }
 
-        document.getElementById('logout-btn').onclick = async () => {
-            if (confirm('¿Cerrar sesión de WhatsApp? Deberás escanear el QR de nuevo.')) {
-                await fetch('/api/logout', { method: 'POST' });
-                location.reload();
-            }
-        };
+        // ─── WhatsApp QR UI ─────────────────────────────────────────────────
+        function updateWhatsAppUI(estado, qr) {
+            const qrBox = document.getElementById('wa-qr-box');
+            const badge = document.getElementById('wa-status-badge');
+            const steps = document.getElementById('wa-steps');
+            const btnReconnect = document.getElementById('btn-wa-reconnect');
 
-        // Start
+            if (estado === 'conectado') {
+                qrBox.innerHTML = '<div style="text-align:center;padding:20px;"><i class="ph-fill ph-check-circle" style="font-size:64px;color:#22c55e;"></i><p style="font-size:13px;color:#22c55e;margin-top:12px;font-weight:600;">¡Conectado!</p></div>';
+                badge.innerHTML = '<span class="wa-status connected"><span class="wa-pulse connected"></span> WhatsApp Conectado — Envía facturas a este número para consolidarlas</span>';
+                steps.style.display = 'none';
+                if (btnReconnect) btnReconnect.style.display = 'inline-flex';
+            } else if (estado === 'esperando_qr' && qr) {
+                qrBox.innerHTML = `<img src="${qr}" alt="QR WhatsApp">`;
+                badge.innerHTML = '<span class="wa-status waiting"><span class="wa-pulse waiting"></span> Esperando escaneo del QR...</span>';
+                steps.style.display = 'flex';
+                if (btnReconnect) btnReconnect.style.display = 'none';
+            } else {
+                qrBox.innerHTML = '<div style="text-align:center;padding:20px;"><i class="ph ph-spinner" style="font-size:48px;color:#f59e0b;animation:spin 1s linear infinite;"></i><p style="font-size:12px;color:#f59e0b;margin-top:8px;">Generando QR...</p></div>';
+                badge.innerHTML = '<span class="wa-status waiting"><span class="wa-pulse waiting"></span> Preparando conexión...</span>';
+                steps.style.display = 'flex';
+                if (btnReconnect) btnReconnect.style.display = 'none';
+            }
+        }
+
+        // Desvincular y reconectar WhatsApp
+        async function reconectarWhatsApp() {
+            const btn = document.getElementById('btn-wa-reconnect');
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ Desvinculando...'; }
+            try {
+                await fetch('/api/logout', { 
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                // El servidor hará logout y reiniciará la conexión, generando un nuevo QR
+                updateWhatsAppUI('desconectado', null);
+            } catch(e) {
+                console.error('Error al desvincular:', e);
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ph ph-arrows-clockwise"></i> Desvincular y Generar Nuevo QR'; }
+            }
+        }
+
+        // Polling de estado WhatsApp (cada 3s para captar el QR rápido)
+        async function pollWhatsAppEstado() {
+            try {
+                const res = await fetch('/api/estado', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.estado) {
+                        updateWhatsAppUI(data.estado, data.qr);
+                    }
+                }
+            } catch(e) {}
+        }
+        pollWhatsAppEstado();
+        setInterval(pollWhatsAppEstado, 3000);
+
         initWS();
     </script>
 </body>
