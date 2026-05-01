@@ -363,6 +363,22 @@
         renderUsers(filtered);
     });
 
+    const empresaIdInput = document.getElementById('empresa_id');
+    const correoContadorInput = document.getElementById('correo_contador');
+    const correoAuxiliarInput = document.getElementById('correo_auxiliar');
+
+    // Auto-generar correos profesionales al escribir el ID de la empresa
+    empresaIdInput.addEventListener('input', () => {
+        const id = empresaIdInput.value.trim().toLowerCase().replace(/\s+/g, '');
+        if (id) {
+            correoContadorInput.value = `${id}cot@danisolutions.com`;
+            correoAuxiliarInput.value = `${id}aux@danisolutions.com`;
+        } else {
+            correoContadorInput.value = '';
+            correoAuxiliarInput.value = '';
+        }
+    });
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         btn.disabled = true;
