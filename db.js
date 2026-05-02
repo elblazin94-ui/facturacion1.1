@@ -20,6 +20,20 @@ export async function obtenerFacturas(empresa_id) {
   return data
 }
 
+export async function obtenerNombreEmpresa(empresa_id) {
+  if (!supabase) return `Empresa ${empresa_id}`
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('empresa_nombre')
+    .eq('empresa_id', empresa_id)
+    .limit(1)
+
+  if (error || !data?.length || !data[0]?.empresa_nombre) {
+    return `Empresa ${empresa_id}`
+  }
+  return data[0].empresa_nombre
+}
+
 export async function agregarFactura(facturaData) {
   if (!supabase) return false
   

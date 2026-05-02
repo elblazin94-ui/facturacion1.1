@@ -15,25 +15,33 @@
 
     <style>
         :root {
-            --bg-body: #f4f7f6;
-            --bg-sidebar: #ffffff;
-            --bg-main: #ffffff;
-            --border-color: #e2e8f0;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --primary-blue: #0f62fe;
-            --sidebar-active-bg: #e0f2fe;
-            --sidebar-active-text: #0284c7;
-
-            --card-header-bg: #f1f5f9;
-            --card-border: #e2e8f0;
-
-            --green-text: #16a34a;
-            --green-bg: #dcfce7;
-            --red-text: #dc2626;
-            --red-bg: #fee2e2;
-
-            --font-main: 'Plus Jakarta Sans', sans-serif;
+            --bg-body: #0f1117;
+            --bg-sidebar: #161822;
+            --bg-main: #0f1117;
+            --bg-card: #1a1d2e;
+            --bg-card-hover: #1f2336;
+            --bg-input: #12141f;
+            --border-color: #2a2d3e;
+            --border-focus: #6366f1;
+            --text-main: #e2e8f0;
+            --text-muted: #8892b0;
+            --text-heading: #f1f5f9;
+            --primary: #6366f1;
+            --primary-hover: #818cf8;
+            --primary-glow: rgba(99,102,241,0.25);
+            --sidebar-active-bg: rgba(99,102,241,0.12);
+            --sidebar-active-text: #818cf8;
+            --green: #22c55e;
+            --green-bg: rgba(34,197,94,0.12);
+            --green-text: #4ade80;
+            --red: #ef4444;
+            --red-bg: rgba(239,68,68,0.12);
+            --red-text: #f87171;
+            --amber: #f59e0b;
+            --amber-bg: rgba(245,158,11,0.12);
+            --amber-text: #fbbf24;
+            --font-main: 'Inter', sans-serif;
+            --radius: 12px;
         }
 
         * {
@@ -76,7 +84,7 @@
         }
 
         .logo i {
-            color: #0ea5e9;
+            color: var(--primary);
             font-size: 28px;
         }
 
@@ -106,7 +114,8 @@
         }
 
         .nav-item:hover {
-            background-color: #f8fafc;
+            background-color: rgba(255,255,255,0.04);
+            color: var(--text-main);
         }
 
         .nav-item.active {
@@ -132,8 +141,13 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 24px 32px;
+            padding: 20px 32px;
             border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: rgba(15, 17, 23, 0.85);
         }
 
         .top-header h1 {
@@ -162,7 +176,7 @@
             position: absolute;
             top: -4px;
             right: -6px;
-            background-color: var(--red-text);
+            background-color: var(--red);
             color: white;
             font-size: 10px;
             font-weight: bold;
@@ -172,7 +186,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 2px solid white;
+            border: 2px solid var(--bg-body);
         }
 
         .avatar-dropdown {
@@ -185,12 +199,13 @@
         .avatar {
             width: 32px;
             height: 32px;
-            background-color: #e2e8f0;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #94a3b8;
+            color: var(--text-muted);
             font-size: 24px;
             overflow: hidden;
         }
@@ -211,10 +226,10 @@
             position: absolute;
             top: 56px;
             right: 0;
-            background: white;
+            background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 10px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
             width: 220px;
             z-index: 100;
             overflow: hidden;
@@ -272,7 +287,7 @@
         }
 
         .dropdown-item:hover {
-            background-color: #f8fafc;
+            background-color: var(--bg-card-hover);
         }
 
         .dropdown-item.danger {
@@ -300,14 +315,21 @@
         }
 
         .stat-card {
-            background-color: #fff;
-            border: 1px solid var(--card-border);
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
             border-radius: 10px;
             padding: 20px;
             display: flex;
             flex-direction: column;
             gap: 12px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px var(--primary-glow);
         }
 
         .stat-title {
@@ -342,8 +364,8 @@
         }
 
         .alert-card {
-            background-color: #fffaf9;
-            border-color: #fed7d7;
+            background-color: var(--red-bg);
+            border-color: rgba(239, 68, 68, 0.2);
         }
 
         .text-red {
@@ -367,19 +389,24 @@
 
         /* Cards Generic */
         .card {
-            border: 1px solid var(--card-border);
+            border: 1px solid var(--border-color);
             border-radius: 10px;
-            background-color: #fff;
+            background-color: var(--bg-card);
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: border-color 0.2s;
+        }
+
+        .card:hover {
+            border-color: rgba(99, 102, 241, 0.3);
         }
 
         .card-header {
-            background-color: var(--card-header-bg);
+            background-color: rgba(255,255,255,0.02);
             padding: 12px 20px;
-            border-bottom: 1px solid var(--card-border);
+            border-bottom: 1px solid var(--border-color);
         }
 
         .card-title {
@@ -401,7 +428,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background-color: #f8fafc;
+            background-color: var(--bg-input);
             padding: 30px;
             flex: 1;
         }
@@ -410,9 +437,10 @@
             max-width: 100%;
             max-height: 400px;
             object-fit: contain;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            background-color: white;
-            padding: 10px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            border-radius: 4px;
+            background-color: #fff;
+            padding: 4px;
         }
 
         .card-footer {
@@ -566,16 +594,16 @@
         th {
             text-align: left;
             padding: 12px 16px;
-            border-bottom: 1px solid var(--card-border);
-            color: var(--text-main);
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-heading);
             font-weight: 600;
-            background-color: #f8fafc;
+            background-color: rgba(255,255,255,0.02);
             white-space: nowrap;
         }
 
         td {
             padding: 12px 16px;
-            border-bottom: 1px solid var(--card-border);
+            border-bottom: 1px solid var(--border-color);
             vertical-align: middle;
             color: var(--text-muted);
         }
@@ -771,7 +799,7 @@
         }
 
         .chart-card {
-            background: white;
+            background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 20px;
@@ -846,6 +874,60 @@
                 flex-direction: column;
                 text-align: center;
             }
+        }
+
+        /* Lightbox para ver fotos de facturas */
+        .lightbox-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.88);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: zoom-out;
+            backdrop-filter: blur(8px);
+            animation: lbFadeIn 0.2s ease;
+        }
+        .lightbox-overlay.active {
+            display: flex;
+        }
+        @keyframes lbFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .lightbox-overlay img {
+            max-width: 90vw;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 16px 64px rgba(0,0,0,0.6);
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 20px; right: 24px;
+            color: white;
+            font-size: 32px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 50%;
+            width: 48px; height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        .lightbox-close:hover {
+            background: rgba(255,255,255,0.25);
+        }
+        .invoice-image-clickable {
+            cursor: zoom-in;
+            transition: transform 0.2s;
+        }
+        .invoice-image-clickable:hover {
+            transform: scale(1.02);
         }
     </style>
 </head>
@@ -988,8 +1070,8 @@
                                 <p style="margin-top:12px; font-size:14px;">Aún no hay facturas recibidas.<br>Envía una
                                     foto de factura por WhatsApp.</p>
                             </div>
-                            <img src="" alt="Última Factura" class="invoice-image" id="latest-invoice-img"
-                                style="display:none;">
+                            <img src="" alt="Última Factura" class="invoice-image invoice-image-clickable" id="latest-invoice-img"
+                                style="display:none;" onclick="openLightbox(this.src)" title="Click para ver en grande">
                         </div>
                         <div class="card-footer">
                             <div class="sender-info">
@@ -1092,7 +1174,7 @@
                     <!-- Export Button -->
                     <div style="display:flex; gap:12px;">
                         <button onclick="exportarCSV()"
-                            style="padding: 8px 16px; background: white; border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; font-family: var(--font-main); font-weight: 500; display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                            style="padding: 8px 16px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; font-family: var(--font-main); font-weight: 500; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-main);">
                             <i class="ph-bold ph-file-csv" style="color: #10b981; font-size: 18px;"></i> Exportar Excel
                         </button>
                     </div>
@@ -1130,7 +1212,7 @@
                             <button onclick="setTab('pendientes')" id="tab-pendientes"
                                 style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--sidebar-active-bg); color: var(--sidebar-active-text); font-family: var(--font-main); font-weight: 600; cursor: pointer;">Pendientes</button>
                             <button onclick="setTab('historial')" id="tab-historial"
-                                style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: white; color: var(--text-muted); font-family: var(--font-main); font-weight: 600; cursor: pointer;">Historial
+                                style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-muted); font-family: var(--font-main); font-weight: 600; cursor: pointer;">Historial
                                 (ERP)</button>
                         </div>
                     </div>
@@ -1162,6 +1244,12 @@
             </div>
         </div>
     </main>
+
+    <!-- Lightbox Modal -->
+    <div class="lightbox-overlay" id="lightbox-overlay" onclick="closeLightbox()">
+        <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+        <img src="" alt="Factura ampliada" id="lightbox-img">
+    </div>
 
     <script>
         // ─── Autenticación JWT ────────────────────────────────────────────────
@@ -1237,7 +1325,8 @@
         const wsUrl = `${protocol}//${window.location.host}`;
 
         function initWS() {
-            ws = new WebSocket(wsUrl);
+            const wsToken = localStorage.getItem('auth_token') || '';
+            ws = new WebSocket(`${wsUrl}?token=${encodeURIComponent(wsToken)}`);
 
             ws.onopen = () => console.log('Conectado al servidor de datos');
             ws.onmessage = (event) => {
@@ -1267,9 +1356,9 @@
 
         function setTab(tab) {
             currentTab = tab;
-            document.getElementById('tab-pendientes').style.background = tab === 'pendientes' ? 'var(--sidebar-active-bg)' : 'white';
+            document.getElementById('tab-pendientes').style.background = tab === 'pendientes' ? 'var(--sidebar-active-bg)' : 'var(--bg-card)';
             document.getElementById('tab-pendientes').style.color = tab === 'pendientes' ? 'var(--sidebar-active-text)' : 'var(--text-muted)';
-            document.getElementById('tab-historial').style.background = tab === 'historial' ? 'var(--sidebar-active-bg)' : 'white';
+            document.getElementById('tab-historial').style.background = tab === 'historial' ? 'var(--sidebar-active-bg)' : 'var(--bg-card)';
             document.getElementById('tab-historial').style.color = tab === 'historial' ? 'var(--sidebar-active-text)' : 'var(--text-muted)';
             updateTable(allFacturas);
         }
@@ -1364,7 +1453,7 @@
                     <td>$ ${Number(f.importe_total || 0).toLocaleString('es-CO')}</td>
                     <td>${estadoSelect}</td>
                     <td class="docs-icons" style="justify-content: center;">
-                        ${f.archivo ? `<a href="${f.archivo}" target="_blank"><i class="ph ph-image text-blue"></i></a>` : '<i class="ph ph-image text-blue"></i>'}
+                        ${f.url_archivo ? `<a href="javascript:void(0)" onclick="event.stopPropagation(); openLightbox('${f.url_archivo}')"><i class="ph ph-image text-blue" style="cursor:pointer;" title="Ver foto de factura"></i></a>` : '<i class="ph ph-image" style="color:#475569; opacity:0.4;" title="Sin imagen"></i>'}
                         <i class="ph ph-file-pdf text-red"></i>
                     </td>
                     <td style="text-align: center;">
@@ -1406,8 +1495,8 @@
                 // Imagen
                 const imgEl = document.getElementById('latest-invoice-img');
                 const placeholder = document.getElementById('no-invoice-placeholder');
-                if (latest.archivo) {
-                    imgEl.src = latest.archivo;
+                if (latest.url_archivo) {
+                    imgEl.src = latest.url_archivo;
                     imgEl.style.display = 'block';
                     placeholder.style.display = 'none';
                 } else {
@@ -1471,7 +1560,7 @@
                 } else if (estadoLower === 'rechazado') {
                     valBadge.style.background = 'var(--red-bg)'; valBadge.style.color = 'var(--red-text)';
                 } else {
-                    valBadge.style.background = '#fef9c3'; valBadge.style.color = '#a16207';
+                    valBadge.style.background = 'var(--amber-bg)'; valBadge.style.color = 'var(--amber)';
                 }
             } else {
                 // Sin facturas: asegurar estado vacío
@@ -1647,7 +1736,16 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#e2e8f0',
+                                boxWidth: 12,
+                                font: { size: 10 }
+                            }
+                        }
+                    }
                 }
             });
 
@@ -1683,7 +1781,16 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true, display: false }, x: { grid: { display: false } } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            display: false
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#8892b0' }
+                        }
+                    },
                     plugins: { legend: { display: false } }
                 }
             });
@@ -1695,6 +1802,27 @@
             originalUpdateTable(facturas);
             updateCharts(facturas);
         };
+
+        // ─── Lightbox para fotos de facturas ─────────────────────────────────
+        window.openLightbox = function(src) {
+            if (!src) return;
+            const overlay = document.getElementById('lightbox-overlay');
+            const img = document.getElementById('lightbox-img');
+            img.src = src;
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        };
+
+        window.closeLightbox = function() {
+            const overlay = document.getElementById('lightbox-overlay');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        };
+
+        // Cerrar lightbox con ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeLightbox();
+        });
 
         initWS();
     </script>

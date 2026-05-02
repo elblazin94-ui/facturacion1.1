@@ -6,7 +6,7 @@ import { createServer } from 'http'
 import { WebSocketServer } from 'ws'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import { obtenerFacturas, actualizarEstadoFactura, agregarFactura } from './db.js'
+import { obtenerFacturas, actualizarEstadoFactura, agregarFactura, obtenerNombreEmpresa } from './db.js'
 import {
   connectToWhatsApp,
   getQrBase64,
@@ -14,6 +14,7 @@ import {
   setOnNuevaFactura,
   setOnEstadoCambio,
   logoutWhatsApp,
+  buildUserMessage,
 } from './whatsapp.js'
 import { loginUsuario, requireAuth, hashPassword, supabase } from './auth.js'
 
@@ -149,7 +150,7 @@ const requireRole = (...roles) => (req, res, next) => {
   next()
 }
 
-const getEmpId = (user) => user?.empresa_id || '1'
+const getEmpId = (user) => user?.empresa_id || 'da-servicios'
 
 // ── Scoring determinístico ────────────────────────────────────────────────────
 function calculateScore(inv) {
@@ -174,9 +175,9 @@ function classifyInvoice(score) {
 }
 
 function statusByClassification(clasificacion) {
-  if (clasificacion === 'ALTA') return 'lista'
-  if (clasificacion === 'MEDIA') return 'pendiente_auxiliar'
-  return 'pendiente_contador'
+  if (clasificacion === 'ALTA') return 'Aprobado'
+  if (clasificacion === 'MEDIA') return 'Revisado'
+  return 'Nuevo'
 }
 
 async function detectDuplicate(supabase, empresa_id, cufe, numero_factura, nit_emisor) {
@@ -266,14 +267,14 @@ app.get('/api/facturas', async (req, res) => {
 })
 
 // Cambiar estado de factura (compatible con estados v2)
-const ESTADOS_VALIDOS = new Set(['Nuevo', 'pendiente_auxiliar', 'pendiente_contador', 'lista', 'lista_para_erp'])
+const ESTADOS_VALIDOS = new Set(['Nuevo', 'Revisado', 'Aprobado', 'Rechazado', 'Sincronizado'])
 app.put('/api/facturas/:id/estado', requireRole('admin', 'contador', 'auxiliar'), async (req, res) => {
   try {
     const { estado } = req.body || {}
     if (!estado || !ESTADOS_VALIDOS.has(estado)) return res.status(400).json({ error: 'Estado inválido' })
 
-    if (estado === 'lista_para_erp' && req.user.rol === 'auxiliar') {
-      return res.status(403).json({ error: 'Solo el contador puede aprobar para ERP' })
+    if (estado === 'Sincronizado' && req.user.rol === 'auxiliar') {
+      return res.status(403).json({ error: 'Solo el contador puede aprobar para Sincronización' })
     }
 
     const isAdmin = req.user.rol === 'admin'
@@ -324,6 +325,9 @@ app.post('/api/facturas/procesar', requireRole('admin', 'contador', 'auxiliar'),
     const resultado = await agregarFactura(facturaData)
     if (!resultado) return res.status(500).json({ error: 'No se pudo guardar la factura' })
 
+    const mensajeWA = buildUserMessage({ ...resultado, moneda: f.moneda || 'COP' })
+    console.log('[Factura] Mensaje WhatsApp listo:\n', mensajeWA)
+
     broadcast({ event: 'nueva_factura', data: resultado })
     res.json({ success: true, factura: resultado, score, clasificacion, duplicado })
   } catch (err) {
@@ -368,7 +372,7 @@ app.patch('/api/facturas/:id', requireRole('admin', 'contador', 'auxiliar'), asy
 // ─── Aprobar factura (solo contador → lista_para_erp) ─────────────────────────
 app.post('/api/facturas/:id/aprobar', requireRole('admin', 'contador'), async (req, res) => {
   try {
-    let query = supabase.from('facturas').update({ estado: 'lista_para_erp' }).eq('id', req.params.id)
+    let query = supabase.from('facturas').update({ estado: 'Sincronizado' }).eq('id', req.params.id)
     if (req.user.rol !== 'admin') query = query.eq('empresa_id', req.user.empresa_id)
 
     const { data, error } = await query.select().single()
@@ -601,98 +605,11 @@ app.put('/api/perfil/password', async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
-// ─── API Facturas: procesar, editar, aprobar ──────────────────────────────────
-app.post('/api/facturas/procesar', requireRole('contador', 'auxiliar'), async (req, res) => {
-  const { supabase } = await import('./auth.js')
-  const inv = req.body
-  const empresa_id = req.user.empresa_id
-
-  if (!inv.nit_emisor && !inv.razon_social_emisor)
-    return res.status(400).json({ error: 'Se requiere al menos NIT o razón social del emisor' })
-
-  const subtotal = Number(inv.subtotal)
-  const iva = Number(inv.iva)
-  const total = Number(inv.total)
-  if ([subtotal, iva, total].some(isNaN))
-    return res.status(400).json({ error: 'subtotal, iva y total deben ser numéricos' })
-
-  try {
-    const duplicado = await detectDuplicate(supabase, empresa_id, inv.cufe, inv.numero_factura, inv.nit_emisor)
-    const score = calculateScore({ ...inv, subtotal, iva, total, duplicado })
-    const clasificacion = classifyInvoice(score)
-    const estado = statusByClassification(clasificacion)
-    const tercero_id = await upsertTercero(supabase, empresa_id, inv.nit_emisor, inv.razon_social_emisor, inv.nit_emisor)
-
-    const { data, error } = await supabase.from('facturas').insert({
-      empresa_id,
-      cufe: inv.cufe || null,
-      numero_factura: inv.numero_factura || null,
-      fecha_factura: inv.fecha_emision || null,
-      nit_emisor: inv.nit_emisor || null,
-      razon_social_emisor: inv.razon_social_emisor || null,
-      nif_proveedor: inv.nit_emisor || null,
-      proveedor: inv.razon_social_emisor || null,
-      subtotal,
-      iva,
-      impuestos: iva,
-      total,
-      importe_total: total,
-      moneda: inv.moneda || 'COP',
-      concepto: inv.concepto || null,
-      metodo_pago: inv.metodo_pago || null,
-      score,
-      clasificacion,
-      estado,
-      duplicado,
-      tercero_id,
-    }).select().single()
-
-    if (error) throw error
-    broadcast({ event: 'nueva_factura', data })
-    res.json({ success: true, factura: data, score, clasificacion, estado, duplicado })
-  } catch (err) {
-    return sendError(res, 500, 'Error procesando factura', err)
-  }
-})
-
-app.patch('/api/facturas/:id', requireRole('contador', 'auxiliar'), async (req, res) => {
-  const { supabase } = await import('./auth.js')
-  const EDITABLE = ['concepto', 'metodo_pago', 'notas', 'categoria', 'nit_emisor', 'razon_social_emisor']
-  const updates = Object.fromEntries(Object.entries(req.body).filter(([k]) => EDITABLE.includes(k)))
-  if (Object.keys(updates).length === 0)
-    return res.status(400).json({ error: 'Ningún campo editable enviado' })
-  try {
-    const { data, error } = await supabase.from('facturas')
-      .update(updates)
-      .eq('id', req.params.id)
-      .eq('empresa_id', req.user.empresa_id)
-      .select().single()
-    if (error) throw error
-    res.json({ success: true, factura: data })
-  } catch (err) {
-    return sendError(res, 500, 'Error actualizando factura', err)
-  }
-})
-
-app.post('/api/facturas/:id/aprobar', async (req, res) => {
-  if (req.user.rol !== 'contador') return res.status(403).json({ error: 'No autorizado' })
-  const { supabase } = await import('./auth.js')
-  try {
-    const { data, error } = await supabase.from('facturas')
-      .update({ estado: 'lista_para_erp' })
-      .eq('id', req.params.id)
-      .eq('empresa_id', req.user.empresa_id)
-      .select().single()
-    if (error) throw error
-    broadcast({ event: 'nueva_factura' })
-    res.json({ success: true, factura: data })
-  } catch (err) {
-    return sendError(res, 500, 'Error aprobando factura', err)
-  }
-})
 
 app.post('/api/logout', async (req, res) => {
-  await logoutWhatsApp(getEmpId(req.user))
+  const empId = getEmpId(req.user)
+  await logoutWhatsApp(empId)
+  connectToWhatsApp(empId).catch(err => console.error('[WhatsApp] Error al reconectar:', err.message))
   res.json({ success: true })
 })
 
@@ -703,40 +620,83 @@ app.get('/api/me', (req, res) => {
 // ─── 4. Servidores ────────────────────────────────────────────────────────────
 const server = createServer(app)
 const wss = new WebSocketServer({ server })
-const clientes = new Set()
+// Mapa empresa_id → Set de clientes WebSocket de esa empresa
+const clientesPorEmpresa = new Map()
 
-wss.on('connection', async (ws) => {
-  clientes.add(ws)
+async function resolveWsEmpresaId(req) {
+  try {
+    const url = new URL(req.url, 'http://localhost')
+    const token = url.searchParams.get('token')
+    if (!token) return null
+    const { data, error } = await supabase.auth.getUser(token)
+    if (error || !data.user) return null
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('empresa_id')
+      .eq('id', data.user.id)
+      .single()
+    return profile?.empresa_id || null
+  } catch {
+    return null
+  }
+}
+
+wss.on('connection', async (ws, req) => {
+  const empresaId = await resolveWsEmpresaId(req)
+  if (!empresaId) {
+    ws.close(1008, 'No autenticado')
+    return
+  }
+  ws.empresaId = empresaId
+  if (!clientesPorEmpresa.has(empresaId)) clientesPorEmpresa.set(empresaId, new Set())
+  clientesPorEmpresa.get(empresaId).add(ws)
+
+  const estadoActual = getEstadoConexion(empresaId)
+  if (estadoActual === 'desconectado') {
+    connectToWhatsApp(empresaId).catch(err => console.error(`[WhatsApp] Error al conectar (${empresaId}):`, err.message))
+  }
+
   try {
     ws.send(JSON.stringify({
       event: 'estado_inicial',
       data: {
-        estado: getEstadoConexion('1'),
-        qr: getQrBase64('1')
+        estado: estadoActual,
+        qr: getQrBase64(empresaId)
       },
     }))
   } catch (err) {
     console.error('[WS] Error en estado inicial:', err.message)
   }
 
-  ws.on('close', () => clientes.delete(ws))
+  ws.on('close', () => {
+    clientesPorEmpresa.get(empresaId)?.delete(ws)
+  })
 })
 
-function broadcast(evento) {
+function broadcast(evento, empresaId = null) {
   const mensaje = JSON.stringify(evento)
-  for (const ws of clientes) {
-    if (ws.readyState === 1) ws.send(mensaje)
+  if (empresaId) {
+    for (const ws of clientesPorEmpresa.get(empresaId) || []) {
+      if (ws.readyState === 1) ws.send(mensaje)
+    }
+  } else {
+    for (const clientes of clientesPorEmpresa.values()) {
+      for (const ws of clientes) {
+        if (ws.readyState === 1) ws.send(mensaje)
+      }
+    }
   }
 }
 
 setOnNuevaFactura((factura) => {
   console.log(`[Sistema] Nueva factura: ${factura.proveedor}`)
-  broadcast({ event: 'nueva_factura', data: factura })
+  broadcast({ event: 'nueva_factura', data: factura }, factura.empresa_id)
 })
 
-setOnEstadoCambio((empresaId, estado, qr) => {
-  console.log(`[WhatsApp] Broadcast estado: ${estado} (empresa ${empresaId})`)
-  broadcast({ event: 'qr_update', data: { estado, qr } })
+setOnEstadoCambio(async (empresaId, estado, qr) => {
+  const nombreEmpresa = await obtenerNombreEmpresa(empresaId) || `Empresa ${empresaId}`
+  console.log(`[WhatsApp] Broadcast estado: ${estado} (${nombreEmpresa})`)
+  broadcast({ event: 'qr_update', data: { estado, qr } }, empresaId)
 })
 
 // seedTestUser eliminado: buscarUsuarioLocal / agregarUsuarioLocal son stubs no-op
@@ -763,11 +723,5 @@ server.listen(PORT, '0.0.0.0', async () => {
   console.log(`📡 Healthcheck: http://0.0.0.0:${PORT}/healthz`)
   console.log('=========================================')
   
-  // Iniciar WhatsApp en segundo plano (no bloqueante)
-  setTimeout(() => {
-    console.log('[WhatsApp] Iniciando conexión...')
-    connectToWhatsApp().catch(err => {
-      console.error('[WhatsApp] Error al conectar:', err.message)
-    })
-  }, 1000)
+  // WhatsApp se inicia automáticamente cuando cada empresa abre el dashboard
 })

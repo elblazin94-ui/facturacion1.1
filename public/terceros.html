@@ -177,10 +177,17 @@
                 <div class="card-body">
                     <div id="alert-box" class="alert"></div>
                     <form id="form-tercero">
-                        <div class="form-grid" style="margin-bottom:18px;">
+                        <div class="form-grid-3" style="margin-bottom:18px;">
+                            <div class="form-group">
+                                <label>Tipo de Tercero</label>
+                                <select id="tipo-tercero" required>
+                                    <option value="proveedor">Proveedor</option>
+                                    <option value="cliente">Cliente</option>
+                                </select>
+                            </div>
                             <div class="form-group">
                                 <label>Nombre o Razón Social</label>
-                                <input type="text" id="nombre" required placeholder="Ej. Empresa S.A.S / Juan Pérez">
+                                <input type="text" id="nombre" required placeholder="Ej. Empresa S.A.S">
                             </div>
                             <div class="form-group">
                                 <label>Identificación (NIT/Cédula)</label>
@@ -253,8 +260,8 @@
     }
     document.getElementById('user-name-display').textContent = authUser.nombre || authUser.correo;
 
-    // Solo el contador puede crear terceros
-    if (!esContador) {
+    // Solo admin y contador pueden crear terceros
+    if (authUser.rol !== 'contador' && authUser.rol !== 'admin') {
         document.getElementById('card-form').style.display = 'none';
     }
 
@@ -281,6 +288,11 @@
 
         document.getElementById('form-tercero').reset();
         document.getElementById('alert-box').className = 'alert';
+        
+        // Sincronizar el dropdown de tipo con la pestaña actual
+        const tipoDropdown = document.getElementById('tipo-tercero');
+        if(tipoDropdown) tipoDropdown.value = tab;
+
         renderTerceros(allTerceros[tab]);
         updateStats();
     }
@@ -396,8 +408,10 @@
         btn.disabled = true;
         document.getElementById('alert-box').className = 'alert';
 
+        const tipoSeleccionado = document.getElementById('tipo-tercero').value;
+
         const payload = {
-            tipo: currentTab,
+            tipo: tipoSeleccionado,
             nombre: document.getElementById('nombre').value.trim(),
             identificacion: document.getElementById('identificacion').value.trim(),
             email: document.getElementById('email').value.trim().toLowerCase(),

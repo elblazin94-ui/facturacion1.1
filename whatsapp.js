@@ -13,7 +13,7 @@ import fsPromises from 'fs/promises'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { extraerURLDeQR, extraerDatosFacturaDIAN, extraerDatosFactura } from './gemini.js'
-import { agregarFactura, esFacturaDuplicada } from './db.js'
+import { agregarFactura, esFacturaDuplicada, obtenerNombreEmpresa } from './db.js'
 import { supabase } from './auth.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -185,7 +185,8 @@ export async function connectToWhatsApp(empresaId = '1') {
         sesiones[empresaId].estado = 'conectado'
         sesiones[empresaId].qr = null
         sesiones[empresaId].retries = 0
-        console.log(`[WhatsApp] ✅ Empresa ${empresaId} conectada`)
+        const nombreEmpresa = await obtenerNombreEmpresa(empresaId) || `Empresa ${empresaId}`
+        console.log(`[WhatsApp] ✅ ${nombreEmpresa} conectada`)
         onEstadoCambio?.(empresaId, 'conectado', null)
       }
     })
@@ -220,7 +221,8 @@ async function procesarMensajeWhatsApp(sock, msg, empresaId) {
   if (!TIPOS_PERMITIDOS.has(tipoMensaje)) {
     const texto = msg.message?.conversation || msg.message?.extendedTextMessage?.text || ''
     if (texto) {
-      await sock.sendMessage(from, { text: `👋 Hola! Soy tu asistente de gestión de gastos.\n\nEnvíame una *foto o PDF de tu factura* y la procesaré para la empresa *${empresaId}*.` })
+      const nombreEmpresaMsg = await obtenerNombreEmpresa(empresaId) || `Empresa ${empresaId}`
+      await sock.sendMessage(from, { text: `👋 Hola, soy *Expensify Hub*, tu asistente contable automático.\nEstoy listo para procesar facturas de *${nombreEmpresaMsg}*.\nEnvíame una *foto o PDF* y la dejaré lista para tu contador en segundos.` })
     }
     return
   }
@@ -258,7 +260,7 @@ async function procesarMensajeWhatsApp(sock, msg, empresaId) {
     // Subida opcional a Supabase Storage
     if (supabase) {
       try {
-        const { data, error } = await supabase.storage.from('facturas_adjuntos').upload(filename, buffer, { contentType: mimeType })
+        const { error } = await supabase.storage.from('facturas_adjuntos').upload(filename, buffer, { contentType: mimeType })
         if (!error) {
           const { data: pubData } = supabase.storage.from('facturas_adjuntos').getPublicUrl(filename)
           url_archivo = pubData.publicUrl
@@ -266,10 +268,7 @@ async function procesarMensajeWhatsApp(sock, msg, empresaId) {
       } catch (err) {}
     }
 
-    datos.url_archivo = url_archivo
-    datos.empresa_id = empresaId 
-    
-    // Sanitización básica
+    // Sanitización numérica
     const sanitizeNum = (v) => {
         if (v == null || v === '') return null
         if (typeof v === 'number') return v
@@ -277,28 +276,78 @@ async function procesarMensajeWhatsApp(sock, msg, empresaId) {
         if (limpio.endsWith(',00') || limpio.endsWith('.00')) limpio = limpio.slice(0, -3)
         return parseFloat(limpio.replace(',', '.')) || null
     }
-    datos.importe_total = sanitizeNum(datos.importe_total)
-    if (datos.moneda === 'COP' && datos.importe_total) datos.importe_total = Math.round(datos.importe_total)
 
-    if (await esFacturaDuplicada(datos)) {
+    const importeTotal = sanitizeNum(datos.importe_total)
+    const subtotal = sanitizeNum(datos.subtotal)
+    const impuestos = sanitizeNum(datos.impuestos)
+
+    // Construir objeto de factura con mapeo explícito a columnas de la tabla
+    const facturaData = {
+      empresa_id: empresaId,
+      proveedor: datos.proveedor || null,
+      nif_proveedor: datos.nif_proveedor || null,
+      nit_emisor: datos.nif_proveedor || null,
+      razon_social_emisor: datos.proveedor || null,
+      numero_factura: datos.numero_factura || null,
+      fecha_factura: datos.fecha_factura || null,
+      concepto: datos.concepto || null,
+      subtotal: subtotal,
+      impuestos: impuestos,
+      iva: impuestos,
+      tipo_impuesto: datos.tipo_impuesto || null,
+      importe_total: (datos.moneda === 'COP' && importeTotal) ? Math.round(importeTotal) : importeTotal,
+      total: (datos.moneda === 'COP' && importeTotal) ? Math.round(importeTotal) : importeTotal,
+      moneda: datos.moneda || 'COP',
+      categoria: datos.categoria || null,
+      metodo_pago: datos.metodo_pago || null,
+      notas: datos.notas || null,
+      cufe: datos.cufe || null,
+      url_archivo: url_archivo,
+      estado: 'Nuevo',
+      score: 0,
+      clasificacion: 'MEDIA',
+      duplicado: false,
+    }
+
+    if (await esFacturaDuplicada(facturaData)) {
       await sock.sendMessage(from, { text: `⚠️ Factura duplicada detectada.` })
       return
     }
 
-    const factura = await agregarFactura(datos)
+    const factura = await agregarFactura(facturaData)
     if (factura && onNuevaFactura) onNuevaFactura(factura)
 
-    await sock.sendMessage(from, { text: formatearResumen(factura) })
+    await sock.sendMessage(from, { text: buildUserMessage(factura) })
   } catch (err) {
     console.error(`[WhatsApp] Error (${empresaId}):`, err.message)
     await sock.sendMessage(from, { text: `❌ Error: ${err.message}` })
   }
 }
 
-function formatearResumen(f) {
-  const importe = f.importe_total ? `${Number(f.importe_total).toLocaleString('es-CO')} ${f.moneda || ''}` : 'N/D'
-  const categoria = f.categoria ? `\n📂 *Categoría:* ${f.categoria}` : ''
-  const nFactura = f.numero_factura ? `\n📄 *Nº Factura:* ${f.numero_factura}` : ''
-  
-  return `✅ *Factura procesada correctamente*\n\n📋 *Proveedor:* ${f.proveedor || 'N/D'}${nFactura}${categoria}\n💰 *Total:* ${importe}\n📅 *Fecha:* ${f.fecha_factura || 'N/D'}\n\n_Tu gasto ya está disponible y categorizado en el panel web._`
+const ESTADO_MSG = {
+  ALTA:  'Procesada correctamente, no se requiere nada adicional.',
+  MEDIA: 'Procesada con observaciones menores. Podríamos requerir confirmación.',
+  BAJA:  'Procesada con inconsistencias. Es posible que necesitemos información adicional.',
+}
+
+export function buildUserMessage(f) {
+  const total = f.importe_total || f.total
+  const importe = total ? `${Number(total).toLocaleString('es-CO')} ${f.moneda || 'COP'}` : '-'
+  const proveedor = f.proveedor || f.razon_social_emisor || '-'
+  const numero = f.numero_factura || '-'
+  const fecha = f.fecha_factura || '-'
+  const estadoMsg = ESTADO_MSG[f.clasificacion] || ESTADO_MSG.MEDIA
+
+  return [
+    `✅ *Factura recibida y procesada*`,
+    ``,
+    `📋 *Proveedor:* ${proveedor}`,
+    `📄 *Factura:* ${numero}`,
+    `💰 *Total:* ${importe}`,
+    `📅 *Fecha:* ${fecha}`,
+    ``,
+    `🧾 *Estado:* ${estadoMsg}`,
+    ``,
+    `_Puedes consultarla en el panel. Si hace falta algo, te lo haremos saber._`,
+  ].join('\n')
 }

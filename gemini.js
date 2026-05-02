@@ -6,8 +6,7 @@ const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 
 const MODELOS = [
   'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
+  'gemini-2.0-flash'
 ]
 
 const PROMPT_QR_URL = `
@@ -45,35 +44,55 @@ Si no puedes leer algún campo, usa null. El campo importe_total es OBLIGATORIO.
 async function llamarGemini(prompt, parts) {
   let lastError = null
   for (const modelo of MODELOS) {
-    for (let intento = 0; intento < 3; intento++) {
+    for (let intento = 0; intento < 2; intento++) {
       try {
         console.log(`[Gemini] Intentando con ${modelo} (intento ${intento + 1})...`)
         const contents = [{
           role: 'user',
           parts: [{ text: prompt }, ...parts],
         }]
-        const result = await genAI.models.generateContent({ model: modelo, contents })
-        const texto = result.text.trim()
-        console.log(`[Gemini] Procesado OK con ${modelo}`)
-        return texto
+        
+        // El SDK @google/genai usa este formato para generar contenido
+        const response = await genAI.models.generateContent({ 
+          model: modelo, 
+          contents 
+        })
+
+        // Extraer texto de forma segura según el SDK
+        let texto = ''
+        if (response.text) {
+          texto = response.text()
+        } else if (response.candidates && response.candidates[0]) {
+          texto = response.candidates[0].content.parts[0].text
+        } else {
+          throw new Error('Formato de respuesta inesperado de Gemini')
+        }
+
+        console.log(`[Gemini] ✅ Procesado OK con ${modelo}`)
+        return texto.trim()
+
       } catch (err) {
         lastError = err
-        const msg = err.message || ''
-        // 404 = modelo no existe → saltar al siguiente sin reintentos
-        if (msg.includes('404') || msg.includes('not found') || msg.includes('not supported')) {
-          console.warn(`[Gemini] Modelo ${modelo} no disponible, probando siguiente...`)
-          break
+        const msg = err.message || String(err)
+        console.error(`[Gemini] Error con ${modelo}: ${msg.substring(0, 150)}`)
+
+        // 404 o 400 (modelo no soportado/encontrado) -> siguiente modelo
+        if (msg.includes('404') || msg.includes('not found') || msg.includes('not supported') || msg.includes('400')) {
+          break 
         }
-        // Errores de cuota / servidor → reintentar con espera
-        const esRetriable = msg.includes('429') || msg.includes('quota') || msg.includes('503') || msg.includes('500')
-        if (esRetriable && intento < 2) {
-          const espera = (intento + 1) * 3000
-          console.warn(`[Gemini] Error retriable (${msg.substring(0, 60)}), esperando ${espera}ms...`)
-          await new Promise(r => setTimeout(r, espera))
-          continue
+
+        // 429 (Cuota) -> esperar y reintentar una vez, luego siguiente modelo
+        if (msg.includes('429') || msg.includes('quota')) {
+          if (intento === 0) {
+            console.warn(`[Gemini] Cuota agotada en ${modelo}, esperando 5s...`)
+            await new Promise(r => setTimeout(r, 5000))
+            continue
+          }
+          break // Siguiente modelo
         }
-        if (esRetriable) break // Next model
-        throw err
+
+        // Otros errores -> siguiente modelo
+        break
       }
     }
   }

@@ -13,18 +13,19 @@
 
     <style>
         :root {
-            --bg-body: #f0f4f8;
-            --bg-card: #ffffff;
-            --border-color: #e2e8f0;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --primary: #0284c7;
-            --primary-hover: #0369a1;
-            --primary-light: #e0f2fe;
-            --green-text: #16a34a;
-            --green-bg: #dcfce7;
-            --red-text: #dc2626;
-            --red-bg: #fee2e2;
+            --bg-body: #0a0c10;
+            --bg-card: #11141b;
+            --bg-input: #1a1d2e;
+            --border-color: #1e293b;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --primary: #6366f1;
+            --primary-hover: #818cf8;
+            --primary-glow: rgba(99, 102, 241, 0.15);
+            --green-text: #4ade80;
+            --green-bg: rgba(74, 222, 128, 0.1);
+            --red-text: #f87171;
+            --red-bg: rgba(248, 113, 113, 0.1);
             --font-main: 'Inter', sans-serif;
         }
 
@@ -54,7 +55,7 @@
             right: -200px;
             width: 600px;
             height: 600px;
-            background: radial-gradient(circle, rgba(2, 132, 199, 0.08) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
             border-radius: 50%;
             z-index: 0;
         }
@@ -66,7 +67,7 @@
             left: -200px;
             width: 500px;
             height: 500px;
-            background: radial-gradient(circle, rgba(16, 185, 129, 0.06) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(34, 197, 94, 0.08) 0%, transparent 70%);
             border-radius: 50%;
             z-index: 0;
         }
@@ -74,11 +75,12 @@
         .login-wrapper {
             display: flex;
             width: 100%;
-            max-width: 900px;
-            min-height: 520px;
+            max-width: 950px;
+            min-height: 580px;
             background: var(--bg-card);
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.06);
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             overflow: hidden;
             z-index: 1;
             margin: 24px;
@@ -86,14 +88,15 @@
 
         /* Left Panel */
         .login-panel-left {
-            flex: 1;
-            background: linear-gradient(145deg, #0284c7 0%, #0ea5e9 50%, #38bdf8 100%);
-            padding: 60px 48px;
+            flex: 1.1;
+            background: linear-gradient(135deg, #11141b 0%, #0a0c10 100%);
+            padding: 60px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             position: relative;
             overflow: hidden;
+            border-right: 1px solid var(--border-color);
         }
 
         .login-panel-left::before {
@@ -129,15 +132,15 @@
         .brand-icon {
             width: 48px;
             height: 48px;
-            background: rgba(255,255,255,0.2);
+            background: var(--primary);
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 26px;
             color: white;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.25);
+            box-shadow: 0 0 20px var(--primary-glow);
+            border: 1px solid rgba(255,255,255,0.1);
         }
 
         .brand-name {
@@ -275,7 +278,7 @@
             font-size: 14px;
             font-family: var(--font-main);
             color: var(--text-main);
-            background: #fafbfc;
+            background: var(--bg-input);
             transition: all 0.2s;
             outline: none;
         }
@@ -284,12 +287,12 @@
         input[type="email"]:focus,
         input[type="password"]:focus {
             border-color: var(--primary);
-            background: white;
-            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+            background: #1e2236;
+            box-shadow: 0 0 0 4px var(--primary-glow);
         }
 
         input::placeholder {
-            color: #cbd5e1;
+            color: #4a5072;
         }
 
         .btn-login {
@@ -315,7 +318,7 @@
         .btn-login:hover {
             background: var(--primary-hover);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+            box-shadow: 0 8px 24px var(--primary-glow);
         }
 
         .btn-login:active {
@@ -359,13 +362,13 @@
         .alert.error {
             background: var(--red-bg);
             color: var(--red-text);
-            border: 1px solid #fecaca;
+            border: 1px solid rgba(248, 113, 113, 0.2);
         }
 
         .alert.success {
             background: var(--green-bg);
             color: var(--green-text);
-            border: 1px solid #bbf7d0;
+            border: 1px solid rgba(74, 222, 128, 0.2);
         }
 
         .alert.show {
