@@ -4,8 +4,8 @@ import makeWASocket, {
   useMultiFileAuthState,
   downloadMediaMessage,
   fetchLatestBaileysVersion,
+  Browsers,
 } from '@whiskeysockets/baileys'
-import { Boom } from '@hapi/boom'
 import qrcodeLib from 'qrcode'
 import pino from 'pino'
 import fs from 'fs'
@@ -29,6 +29,7 @@ const sesiones = {}
 // Estructura de cada sesión: { sock, qr, estado, refreshTimer }
 
 let onNuevaFactura = null
+let onEstadoCambio = null
 let waVersion = null  // cached — fetched once, reused on reconnects
 
 export function getSock(empresaId = '1') {
@@ -47,24 +48,35 @@ export function setOnNuevaFactura(callback) {
   onNuevaFactura = callback
 }
 
+export function setOnEstadoCambio(callback) {
+  onEstadoCambio = callback
+}
+
 export async function logoutWhatsApp(empresaId = '1') {
   console.log(`[WhatsApp] Logout solicitado para empresa: ${empresaId}`)
   const s = sesiones[empresaId]
+
+  // Marcar como desconectado ANTES de cerrar el socket para que el handler
+  // de connection.update no intente reconectar ni acceder a la sesión borrada
+  if (sesiones[empresaId]) {
+    sesiones[empresaId].estado = 'desconectado'
+    sesiones[empresaId].qr = null
+  }
+
   if (s && s.sock) {
     try {
+      s.sock.ev.removeAllListeners()
       await s.sock.logout()
-      s.sock.end()
-    } catch (err) {
-      console.log(`Error al hacer logout (${empresaId}):`, err)
-    }
+    } catch (_) {}
+    try { s.sock.end() } catch (_) {}
   }
-  
+
   if (sesiones[empresaId]) delete sesiones[empresaId]
 
   const authDir = path.join(AUTH_BASE_DIR, `emp_${empresaId}`)
   try {
     await fsPromises.rm(authDir, { recursive: true, force: true })
-  } catch (e) {}
+  } catch (_) {}
 
   setTimeout(() => connectToWhatsApp(empresaId).catch(console.error), 2000)
 }
@@ -90,8 +102,14 @@ export async function connectToWhatsApp(empresaId = '1') {
     const { state, saveCreds } = await useMultiFileAuthState(authDir)
 
     if (!waVersion) {
-      const { version } = await fetchLatestBaileysVersion()
-      waVersion = version
+      try {
+        const { version } = await fetchLatestBaileysVersion()
+        waVersion = version
+        console.log(`[WhatsApp] Versión WA: ${version.join('.')}`)
+      } catch (_) {
+        waVersion = [2, 3000, 1023079571]
+        console.log('[WhatsApp] No se pudo obtener versión, usando fallback')
+      }
     }
 
     // Clean up old socket listeners before replacing
@@ -104,15 +122,20 @@ export async function connectToWhatsApp(empresaId = '1') {
       version: waVersion,
       auth: state,
       logger: pino({ level: 'silent' }),
-      browser: [`Expensify Hub (${empresaId})`, 'Chrome', '120.0.0'],
+      browser: Browsers.ubuntu('Chrome'),
       printQRInTerminal: false,
       syncFullHistory: false,
       generateHighQualityLinkPreview: false,
+      connectTimeoutMs: 60000,
+      keepAliveIntervalMs: 30000,
     })
 
     sesiones[empresaId].sock = sock
 
     sock.ev.on('connection.update', async (update) => {
+      // La sesión puede haber sido eliminada por logoutWhatsApp mientras el evento estaba en vuelo
+      if (!sesiones[empresaId]) return
+
       const { connection, lastDisconnect, qr } = update
 
       if (qr) {
@@ -124,6 +147,7 @@ export async function connectToWhatsApp(empresaId = '1') {
           width: 300,
         })
         console.log(`[WhatsApp] QR listo para empresa ${empresaId}`)
+        onEstadoCambio?.(empresaId, 'esperando_qr', sesiones[empresaId].qr)
       }
 
       if (connection === 'close') {
@@ -146,10 +170,12 @@ export async function connectToWhatsApp(empresaId = '1') {
           } else {
             sesiones[empresaId].estado = 'reconectando'
           }
+          onEstadoCambio?.(empresaId, sesiones[empresaId].estado, null)
           setTimeout(() => connectToWhatsApp(empresaId), 3000)
         } else {
           sesiones[empresaId].estado = 'desconectado'
           sesiones[empresaId].retries = 0
+          onEstadoCambio?.(empresaId, 'desconectado', null)
           try { await fsPromises.rm(authDir, { recursive: true, force: true }) } catch (_) {}
           setTimeout(() => connectToWhatsApp(empresaId), 2000)
         }
@@ -160,6 +186,7 @@ export async function connectToWhatsApp(empresaId = '1') {
         sesiones[empresaId].qr = null
         sesiones[empresaId].retries = 0
         console.log(`[WhatsApp] ✅ Empresa ${empresaId} conectada`)
+        onEstadoCambio?.(empresaId, 'conectado', null)
       }
     })
 

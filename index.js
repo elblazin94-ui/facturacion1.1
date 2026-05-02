@@ -6,15 +6,16 @@ import { createServer } from 'http'
 import { WebSocketServer } from 'ws'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import { obtenerFacturas, actualizarEstadoFactura } from './db.js'
+import { obtenerFacturas, actualizarEstadoFactura, agregarFactura } from './db.js'
 import {
   connectToWhatsApp,
   getQrBase64,
   getEstadoConexion,
   setOnNuevaFactura,
+  setOnEstadoCambio,
   logoutWhatsApp,
 } from './whatsapp.js'
-import { loginUsuario, requireAuth, hashPassword } from './auth.js'
+import { loginUsuario, requireAuth, hashPassword, supabase } from './auth.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PORT = process.env.PORT || 3000
@@ -150,8 +151,84 @@ const requireRole = (...roles) => (req, res, next) => {
 
 const getEmpId = (user) => user?.empresa_id || '1'
 
-// Vistas protegidas por SSR no son necesarias si usamos redirección en el cliente
+// ── Scoring determinístico ────────────────────────────────────────────────────
+function calculateScore(inv) {
+  let score = 0
+  if (inv.cufe) score += 20
+  if (inv.cufe && inv.cufe.length > 30) score += 15
+  const subtotal = Number(inv.subtotal)
+  const iva = Number(inv.iva)
+  const total = Number(inv.total)
+  if (!isNaN(subtotal) && !isNaN(iva) && !isNaN(total) &&
+      Math.abs((subtotal + iva) - total) <= 1) score += 20
+  if (/^[0-9]{8,10}$/.test(inv.nit_emisor)) score += 15
+  if (inv.fecha_emision) score += 10
+  if (!inv.duplicado) score += 20
+  return score
+}
+
+function classifyInvoice(score) {
+  if (score >= 90) return 'ALTA'
+  if (score >= 70) return 'MEDIA'
+  return 'BAJA'
+}
+
+function statusByClassification(clasificacion) {
+  if (clasificacion === 'ALTA') return 'lista'
+  if (clasificacion === 'MEDIA') return 'pendiente_auxiliar'
+  return 'pendiente_contador'
+}
+
+async function detectDuplicate(supabase, empresa_id, cufe, numero_factura, nit_emisor) {
+  if (cufe) {
+    const { data } = await supabase.from('facturas').select('id')
+      .eq('empresa_id', empresa_id).eq('cufe', cufe).limit(1)
+    if (data?.length > 0) return true
+  }
+  if (numero_factura && nit_emisor) {
+    const { data } = await supabase.from('facturas').select('id')
+      .eq('empresa_id', empresa_id)
+      .eq('numero_factura', numero_factura)
+      .eq('nit_emisor', nit_emisor)
+      .limit(1)
+    if (data?.length > 0) return true
+  }
+  return false
+}
+
+async function upsertTercero(empresaId, nit, nombre) {
+  if (!nit) return null
+  const { data: existing } = await supabase
+    .from('terceros')
+    .select('id')
+    .eq('empresa_id', empresaId)
+    .eq('identificacion', nit)
+    .limit(1)
+
+  if (existing && existing.length > 0) return existing[0].id
+
+  const { data: nuevo, error } = await supabase
+    .from('terceros')
+    .insert([{
+      empresa_id: empresaId,
+      tipo: 'proveedor',
+      nombre: nombre || 'Sin nombre',
+      identificacion: nit,
+      verificado: false
+    }])
+    .select('id')
+    .single()
+
+  if (error) {
+    console.error('[Terceros] Error al crear:', error.message)
+    return null
+  }
+  return nuevo?.id
+}
+
+// Vistas protegidas
 app.get('/usuarios', (_req, res) => res.sendFile(join(__dirname, 'public', 'usuarios.html')))
+app.get('/terceros', (_req, res) => res.sendFile(join(__dirname, 'public', 'terceros.html')))
 app.get('/dashboard', (req, res) => res.redirect('/'))
 
 app.get('/api/estado', (req, res) => {
@@ -164,26 +241,39 @@ app.get('/api/estado', (req, res) => {
 
 app.get('/api/facturas', async (req, res) => {
   try {
-    // Admin ve todas, clientes solo las suyas
-    const empresaFilter = req.user.rol === 'admin' ? null : req.user.empresa_id
-    const facturas = await obtenerFacturas(empresaFilter)
-    res.json(facturas || [])
+    let query = supabase.from('facturas').select('*')
+
+    // Admin ve todas, el resto solo las de su empresa
+    if (req.user.rol !== 'admin') {
+      query = query.eq('empresa_id', req.user.empresa_id)
+    }
+
+    // Filtrado por rol
+    if (req.user.rol === 'auxiliar') {
+      query = query.in('clasificacion', ['ALTA', 'MEDIA'])
+    } else if (req.user.rol === 'contador') {
+      query = query.in('clasificacion', ['MEDIA', 'BAJA'])
+    }
+
+    query = query.order('created_at', { ascending: false })
+    const { data, error } = await query
+    if (error) throw error
+    res.json(data || [])
   } catch (err) {
     console.error('[API] Error obteniendo facturas:', err.message)
-    res.json([]) // Devolver array vacío en lugar de error 500
+    res.json([])
   }
 })
 
-// Cambiar estado de factura
-const ESTADOS_VALIDOS = new Set(['Nuevo', 'Revisado', 'Aprobado', 'Rechazado', 'Sincronizado'])
+// Cambiar estado de factura (compatible con estados v2)
+const ESTADOS_VALIDOS = new Set(['Nuevo', 'pendiente_auxiliar', 'pendiente_contador', 'lista', 'lista_para_erp'])
 app.put('/api/facturas/:id/estado', requireRole('admin', 'contador', 'auxiliar'), async (req, res) => {
   try {
     const { estado } = req.body || {}
     if (!estado || !ESTADOS_VALIDOS.has(estado)) return res.status(400).json({ error: 'Estado inválido' })
-    
-    // Solo admin y contador pueden marcar como Sincronizado
-    if (estado === 'Sincronizado' && req.user.rol === 'auxiliar') {
-      return res.status(403).json({ error: 'Solo el contador puede sincronizar con el ERP' })
+
+    if (estado === 'lista_para_erp' && req.user.rol === 'auxiliar') {
+      return res.status(403).json({ error: 'Solo el contador puede aprobar para ERP' })
     }
 
     const isAdmin = req.user.rol === 'admin'
@@ -198,7 +288,169 @@ app.put('/api/facturas/:id/estado', requireRole('admin', 'contador', 'auxiliar')
   }
 })
 
-// Listar usuarios (Híbrido: Supabase + Local)
+// ─── Procesar factura (flujo completo: duplicados → score → tercero → guardar) ─
+app.post('/api/facturas/procesar', requireRole('admin', 'contador', 'auxiliar'), async (req, res) => {
+  try {
+    const f = req.body
+    const empresaId = req.user.empresa_id || '1'
+    const nit = f.nit_emisor || f.nif_proveedor
+    const nombreTercero = f.razon_social_emisor || f.proveedor
+
+    // 1. Detectar duplicado
+    const duplicado = await detectDuplicate(supabase, empresaId, f.cufe, f.numero_factura, nit)
+
+    // 2. Score y clasificación
+    const facturaTemp = { ...f, duplicado }
+    const score = calculateScore(facturaTemp)
+    const clasificacion = classifyInvoice(score)
+    const estado = statusByClassification(clasificacion)
+
+    // 3. Upsert tercero automático
+    const tercero_id = nit ? await upsertTercero(empresaId, nit, nombreTercero) : null
+
+    // 4. Guardar factura
+    const facturaData = {
+      ...f,
+      empresa_id: empresaId,
+      score,
+      clasificacion,
+      estado: duplicado ? 'Nuevo' : estado,
+      duplicado,
+      tercero_id,
+      nit_emisor: nit,
+      razon_social_emisor: nombreTercero,
+    }
+
+    const resultado = await agregarFactura(facturaData)
+    if (!resultado) return res.status(500).json({ error: 'No se pudo guardar la factura' })
+
+    broadcast({ event: 'nueva_factura', data: resultado })
+    res.json({ success: true, factura: resultado, score, clasificacion, duplicado })
+  } catch (err) {
+    return sendError(res, 500, 'Error procesando factura', err)
+  }
+})
+
+// ─── Editar factura (campos permitidos) ────────────────────────────────────────
+const CAMPOS_EDITABLES = new Set([
+  'proveedor', 'nif_proveedor', 'numero_factura', 'fecha_factura',
+  'concepto', 'subtotal', 'impuestos', 'importe_total', 'moneda',
+  'categoria', 'metodo_pago', 'notas', 'cufe', 'nit_emisor',
+  'razon_social_emisor', 'iva', 'total'
+])
+app.patch('/api/facturas/:id', requireRole('admin', 'contador', 'auxiliar'), async (req, res) => {
+  try {
+    const updates = {}
+    for (const [k, v] of Object.entries(req.body)) {
+      if (CAMPOS_EDITABLES.has(k)) updates[k] = v
+    }
+    if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No hay campos válidos para editar' })
+
+    const { data: facActual } = await supabase.from('facturas').select('*').eq('id', req.params.id).single()
+    if (!facActual) return res.status(404).json({ error: 'Factura no encontrada' })
+
+    const merged = { ...facActual, ...updates }
+    updates.score = calculateScore(merged)
+    updates.clasificacion = classifyInvoice(updates.score)
+
+    let query = supabase.from('facturas').update(updates).eq('id', req.params.id)
+    if (req.user.rol !== 'admin') query = query.eq('empresa_id', req.user.empresa_id)
+
+    const { data, error } = await query.select().single()
+    if (error) throw error
+    broadcast({ event: 'nueva_factura' })
+    res.json({ success: true, factura: data })
+  } catch (err) {
+    return sendError(res, 500, 'Error editando factura', err)
+  }
+})
+
+// ─── Aprobar factura (solo contador → lista_para_erp) ─────────────────────────
+app.post('/api/facturas/:id/aprobar', requireRole('admin', 'contador'), async (req, res) => {
+  try {
+    let query = supabase.from('facturas').update({ estado: 'lista_para_erp' }).eq('id', req.params.id)
+    if (req.user.rol !== 'admin') query = query.eq('empresa_id', req.user.empresa_id)
+
+    const { data, error } = await query.select().single()
+    if (error) throw error
+    if (!data) return res.status(404).json({ error: 'Factura no encontrada' })
+
+    broadcast({ event: 'nueva_factura' })
+    res.json({ success: true, factura: data })
+  } catch (err) {
+    return sendError(res, 500, 'Error aprobando factura', err)
+  }
+})
+
+// ─── API Terceros (CRUD completo) ─────────────────────────────────────────────
+app.get('/api/terceros', async (req, res) => {
+  try {
+    const tipo = req.query.tipo
+    let query = supabase.from('terceros').select('*').eq('empresa_id', req.user.empresa_id)
+    if (tipo) query = query.eq('tipo', tipo)
+    const { data, error } = await query.order('created_at', { ascending: false })
+    if (error) throw error
+    res.json(data || [])
+  } catch (err) {
+    return sendError(res, 500, 'Error obteniendo terceros', err)
+  }
+})
+
+app.post('/api/terceros', requireRole('admin', 'contador'), async (req, res) => {
+  const { nombre, identificacion, tipo, email, telefono, direccion } = req.body
+  if (!nombre || !tipo) return res.status(400).json({ error: 'Nombre y tipo son requeridos' })
+  try {
+    const { data, error } = await supabase
+      .from('terceros')
+      .insert([{ nombre, identificacion, tipo, email, telefono, direccion, empresa_id: req.user.empresa_id, verificado: true }])
+      .select().single()
+    if (error) throw error
+    res.json({ success: true, tercero: data })
+  } catch (err) {
+    return sendError(res, 500, 'Error creando tercero', err)
+  }
+})
+
+app.put('/api/terceros/:id', requireRole('admin', 'contador'), async (req, res) => {
+  const { nombre, identificacion, tipo, email, telefono, direccion } = req.body
+  try {
+    const { data, error } = await supabase
+      .from('terceros')
+      .update({ nombre, identificacion, tipo, email, telefono, direccion })
+      .eq('id', req.params.id).eq('empresa_id', req.user.empresa_id)
+      .select().single()
+    if (error) throw error
+    res.json({ success: true, tercero: data })
+  } catch (err) {
+    return sendError(res, 500, 'Error actualizando tercero', err)
+  }
+})
+
+app.delete('/api/terceros/:id', requireRole('admin', 'contador'), async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('terceros').delete()
+      .eq('id', req.params.id).eq('empresa_id', req.user.empresa_id)
+    if (error) throw error
+    res.json({ success: true })
+  } catch (err) {
+    return sendError(res, 500, 'Error eliminando tercero', err)
+  }
+})
+
+app.patch('/api/terceros/:id/aprobar', requireRole('admin', 'contador'), async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('terceros').update({ verificado: true })
+      .eq('id', req.params.id).eq('empresa_id', req.user.empresa_id)
+      .select().single()
+    if (error) throw error
+    res.json({ success: true, tercero: data })
+  } catch (err) {
+    return sendError(res, 500, 'Error aprobando tercero', err)
+  }
+})
+
 // Listar usuarios (desde la tabla profiles de Supabase)
 app.get('/api/usuarios', requireRole('admin'), async (req, res) => {
   const { supabase } = await import('./auth.js')
@@ -349,93 +601,95 @@ app.put('/api/perfil/password', async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
-// ─── API Clientes (CRUD en Supabase) ───────────────────────────────────────
-app.get('/api/clientes', async (req, res) => {
+// ─── API Facturas: procesar, editar, aprobar ──────────────────────────────────
+app.post('/api/facturas/procesar', requireRole('contador', 'auxiliar'), async (req, res) => {
   const { supabase } = await import('./auth.js')
-  if (!supabase) return res.status(500).json({ error: 'Supabase no configurado' })
+  const inv = req.body
+  const empresa_id = req.user.empresa_id
+
+  if (!inv.nit_emisor && !inv.razon_social_emisor)
+    return res.status(400).json({ error: 'Se requiere al menos NIT o razón social del emisor' })
+
+  const subtotal = Number(inv.subtotal)
+  const iva = Number(inv.iva)
+  const total = Number(inv.total)
+  if ([subtotal, iva, total].some(isNaN))
+    return res.status(400).json({ error: 'subtotal, iva y total deben ser numéricos' })
 
   try {
-    const { data, error } = await supabase
-      .from('clientes')
-      .select('*')
-      .eq('empresa_id', req.user.empresa_id)
-      .order('created_at', { ascending: false })
+    const duplicado = await detectDuplicate(supabase, empresa_id, inv.cufe, inv.numero_factura, inv.nit_emisor)
+    const score = calculateScore({ ...inv, subtotal, iva, total, duplicado })
+    const clasificacion = classifyInvoice(score)
+    const estado = statusByClassification(clasificacion)
+    const tercero_id = await upsertTercero(supabase, empresa_id, inv.nit_emisor, inv.razon_social_emisor, inv.nit_emisor)
+
+    const { data, error } = await supabase.from('facturas').insert({
+      empresa_id,
+      cufe: inv.cufe || null,
+      numero_factura: inv.numero_factura || null,
+      fecha_factura: inv.fecha_emision || null,
+      nit_emisor: inv.nit_emisor || null,
+      razon_social_emisor: inv.razon_social_emisor || null,
+      nif_proveedor: inv.nit_emisor || null,
+      proveedor: inv.razon_social_emisor || null,
+      subtotal,
+      iva,
+      impuestos: iva,
+      total,
+      importe_total: total,
+      moneda: inv.moneda || 'COP',
+      concepto: inv.concepto || null,
+      metodo_pago: inv.metodo_pago || null,
+      score,
+      clasificacion,
+      estado,
+      duplicado,
+      tercero_id,
+    }).select().single()
 
     if (error) throw error
-    res.json(data)
+    broadcast({ event: 'nueva_factura', data })
+    res.json({ success: true, factura: data, score, clasificacion, estado, duplicado })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    return sendError(res, 500, 'Error procesando factura', err)
   }
 })
 
-app.post('/api/clientes', async (req, res) => {
+app.patch('/api/facturas/:id', requireRole('contador', 'auxiliar'), async (req, res) => {
   const { supabase } = await import('./auth.js')
-  if (!supabase) return res.status(500).json({ error: 'Supabase no configurado' })
-
-  const { nombre, identificacion, email, telefono, direccion } = req.body
-  if (!nombre) return res.status(400).json({ error: 'El nombre es requerido' })
-
+  const EDITABLE = ['concepto', 'metodo_pago', 'notas', 'categoria', 'nit_emisor', 'razon_social_emisor']
+  const updates = Object.fromEntries(Object.entries(req.body).filter(([k]) => EDITABLE.includes(k)))
+  if (Object.keys(updates).length === 0)
+    return res.status(400).json({ error: 'Ningún campo editable enviado' })
   try {
-    const { data, error } = await supabase
-      .from('clientes')
-      .insert([{ 
-        nombre, 
-        identificacion, 
-        email, 
-        telefono, 
-        direccion, 
-        empresa_id: req.user.empresa_id 
-      }])
-      .select()
-      .single()
-
-    if (error) throw error
-    res.json({ success: true, cliente: data })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
-
-app.put('/api/clientes/:id', async (req, res) => {
-  const { supabase } = await import('./auth.js')
-  if (!supabase) return res.status(500).json({ error: 'Supabase no configurado' })
-
-  const { nombre, identificacion, email, telefono, direccion } = req.body
-
-  try {
-    const { data, error } = await supabase
-      .from('clientes')
-      .update({ nombre, identificacion, email, telefono, direccion })
+    const { data, error } = await supabase.from('facturas')
+      .update(updates)
       .eq('id', req.params.id)
       .eq('empresa_id', req.user.empresa_id)
-      .select()
-      .single()
-
+      .select().single()
     if (error) throw error
-    res.json({ success: true, cliente: data })
+    res.json({ success: true, factura: data })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    return sendError(res, 500, 'Error actualizando factura', err)
   }
 })
 
-app.delete('/api/clientes/:id', async (req, res) => {
+app.post('/api/facturas/:id/aprobar', async (req, res) => {
+  if (req.user.rol !== 'contador') return res.status(403).json({ error: 'No autorizado' })
   const { supabase } = await import('./auth.js')
-  if (!supabase) return res.status(500).json({ error: 'Supabase no configurado' })
-
   try {
-    const { error } = await supabase
-      .from('clientes')
-      .delete()
+    const { data, error } = await supabase.from('facturas')
+      .update({ estado: 'lista_para_erp' })
       .eq('id', req.params.id)
       .eq('empresa_id', req.user.empresa_id)
-
+      .select().single()
     if (error) throw error
-    res.json({ success: true })
+    broadcast({ event: 'nueva_factura' })
+    res.json({ success: true, factura: data })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    return sendError(res, 500, 'Error aprobando factura', err)
   }
 })
-
 
 app.post('/api/logout', async (req, res) => {
   await logoutWhatsApp(getEmpId(req.user))
@@ -478,6 +732,11 @@ function broadcast(evento) {
 setOnNuevaFactura((factura) => {
   console.log(`[Sistema] Nueva factura: ${factura.proveedor}`)
   broadcast({ event: 'nueva_factura', data: factura })
+})
+
+setOnEstadoCambio((empresaId, estado, qr) => {
+  console.log(`[WhatsApp] Broadcast estado: ${estado} (empresa ${empresaId})`)
+  broadcast({ event: 'qr_update', data: { estado, qr } })
 })
 
 // seedTestUser eliminado: buscarUsuarioLocal / agregarUsuarioLocal son stubs no-op

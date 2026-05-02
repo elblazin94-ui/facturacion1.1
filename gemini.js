@@ -1,8 +1,8 @@
 // gemini.js — Extracción de datos contables de facturas con Gemini Vision y parsing de DIAN
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenAI } from '@google/genai'
 import * as cheerio from 'cheerio'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 
 const MODELOS = [
   'gemini-2.5-flash',
@@ -48,9 +48,12 @@ async function llamarGemini(prompt, parts) {
     for (let intento = 0; intento < 3; intento++) {
       try {
         console.log(`[Gemini] Intentando con ${modelo} (intento ${intento + 1})...`)
-        const model = genAI.getGenerativeModel({ model: modelo })
-        const result = await model.generateContent([prompt, ...parts])
-        const texto = result.response.text().trim()
+        const contents = [{
+          role: 'user',
+          parts: [{ text: prompt }, ...parts],
+        }]
+        const result = await genAI.models.generateContent({ model: modelo, contents })
+        const texto = result.text.trim()
         console.log(`[Gemini] Procesado OK con ${modelo}`)
         return texto
       } catch (err) {
@@ -96,8 +99,7 @@ export async function extraerURLDeQR(buffer, mimeType) {
 export async function extraerDatosFacturaDIAN(urlDian) {
   try {
     console.log(`[DIAN] Descargando contenido de URL DIAN: ${urlDian}`)
-    
-    // Obtenemos el HTML de la página de la DIAN
+
     const response = await fetch(urlDian, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -110,19 +112,15 @@ export async function extraerDatosFacturaDIAN(urlDian) {
     }
 
     const html = await response.text()
-    
-    // Extraemos todo el texto visible usando Cheerio
+
     const $ = cheerio.load(html)
-    // Removemos scripts, styles, etc para limpiar el ruido
     $('script, style, noscript, svg, img').remove()
     const textoLimpio = $('body').text().replace(/\s+/g, ' ').trim()
 
     console.log(`[DIAN] HTML descargado y limpiado, procesando con Gemini... (${textoLimpio.substring(0, 100)}...)`)
 
-    // Pasamos el texto a Gemini para extraer los datos estructurados
-    const textoRespuesta = await llamarGemini(PROMPT_DIAN, [`\n\nTexto de la DIAN:\n${textoLimpio}`])
+    const textoRespuesta = await llamarGemini(PROMPT_DIAN, [{ text: `\n\nTexto de la DIAN:\n${textoLimpio}` }])
 
-    // Limpiamos los backticks de markdown
     const jsonLimpio = textoRespuesta
           .replace(/^```json\s*/i, '')
           .replace(/^```\s*/i, '')
@@ -130,8 +128,7 @@ export async function extraerDatosFacturaDIAN(urlDian) {
           .trim()
 
     const datos = JSON.parse(jsonLimpio)
-    
-    // Si la IA no encontró el CUFE explícitamente en el HTML, muchas veces viene en la URL de la DIAN
+
     if (!datos.cufe && urlDian.includes('documentkey=')) {
         const queryParams = new URL(urlDian).searchParams
         datos.cufe = queryParams.get('documentkey')
@@ -176,7 +173,7 @@ export async function extraerDatosFactura(buffer, mimeType) {
   }
 
   const respuesta = await llamarGemini(PROMPT_EXTRACCION_DIRECTA, [imagePart])
-  
+
   try {
     console.log('[Gemini] Respuesta raw de extracción directa:', respuesta)
     const jsonLimpio = respuesta
@@ -184,7 +181,7 @@ export async function extraerDatosFactura(buffer, mimeType) {
       .replace(/^```\s*/i, '')
       .replace(/\s*```$/i, '')
       .trim()
-      
+
     return JSON.parse(jsonLimpio)
   } catch (err) {
     console.error('[Gemini] Error parseando JSON de extracción directa:', err.message)

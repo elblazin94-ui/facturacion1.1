@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expensify Hub - Directorio de Terceros</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        :root {
+            --bg-body: #0f1117;
+            --bg-sidebar: #161822;
+            --bg-main: #0f1117;
+            --bg-card: #1a1d2e;
+            --bg-card-hover: #1f2336;
+            --bg-input: #12141f;
+            --border-color: #2a2d3e;
+            --border-focus: #6366f1;
+            --text-main: #e2e8f0;
+            --text-muted: #8892b0;
+            --text-heading: #f1f5f9;
+            --primary: #6366f1;
+            --primary-hover: #818cf8;
+            --primary-glow: rgba(99,102,241,0.25);
+            --sidebar-active-bg: rgba(99,102,241,0.12);
+            --sidebar-active-text: #818cf8;
+            --green: #22c55e;
+            --green-bg: rgba(34,197,94,0.12);
+            --red: #ef4444;
+            --red-bg: rgba(239,68,68,0.12);
+            --amber: #f59e0b;
+            --amber-bg: rgba(245,158,11,0.12);
+            --font: 'Inter', sans-serif;
+            --radius: 12px;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:var(--bg-body); color:var(--text-main); font-family:var(--font); display:flex; height:100vh; overflow:hidden; -webkit-font-smoothing:antialiased; }
+
+        .sidebar { width:250px; background:var(--bg-sidebar); border-right:1px solid var(--border-color); display:flex; flex-direction:column; padding:24px 0; flex-shrink:0; }
+        .logo { display:flex; align-items:center; gap:12px; padding:0 24px; margin-bottom:40px; font-weight:700; font-size:20px; color:var(--text-heading); }
+        .logo i { color:var(--primary); font-size:28px; }
+        .sidebar-nav { display:flex; flex-direction:column; gap:4px; padding:0 12px; }
+        .nav-item { display:flex; align-items:center; gap:12px; padding:12px 16px; text-decoration:none; color:var(--text-muted); border-radius:10px; font-size:14px; font-weight:500; transition:all .2s; }
+        .nav-item i { font-size:20px; }
+        .nav-item:hover { background:rgba(255,255,255,.04); color:var(--text-main); }
+        .nav-item.active { background:var(--sidebar-active-bg); color:var(--sidebar-active-text); }
+
+        .main-content { flex:1; display:flex; flex-direction:column; overflow-y:auto; }
+        .top-header { display:flex; justify-content:space-between; align-items:center; padding:20px 32px; border-bottom:1px solid var(--border-color); backdrop-filter:blur(12px); position:sticky; top:0; z-index:10; background:rgba(15,17,23,.85); }
+        .top-header h1 { font-size:20px; font-weight:700; color:var(--text-heading); }
+        .header-right { display:flex; align-items:center; gap:16px; }
+        .user-tag { font-size:13px; color:var(--text-muted); padding:6px 14px; background:var(--bg-card); border-radius:20px; border:1px solid var(--border-color); }
+
+        .dashboard-content { padding:28px 32px; max-width:1100px; margin:0 auto; width:100%; display:flex; flex-direction:column; gap:24px; }
+
+        /* Tabs */
+        .tabs { display:flex; gap:8px; }
+        .tab-btn { position:relative; display:inline-flex; align-items:center; gap:8px; padding:8px 18px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-muted); font-family:var(--font); font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; }
+        .tab-btn:hover { border-color:var(--primary); color:var(--text-main); }
+        .tab-btn.active { background:var(--sidebar-active-bg); color:var(--sidebar-active-text); border-color:var(--primary); }
+        .badge { position:absolute; top:-6px; right:-6px; background:var(--amber); color:#000; font-size:10px; font-weight:700; padding:2px 6px; border-radius:10px; display:none; }
+        .badge.visible { display:block; }
+
+        /* Stats */
+        .stats-row { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
+        .stat-card { background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius); padding:20px; transition:all .2s; }
+        .stat-card:hover { border-color:var(--primary); box-shadow:0 0 20px var(--primary-glow); }
+        .stat-label { font-size:13px; color:var(--text-muted); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+        .stat-value { font-size:28px; font-weight:800; color:var(--text-heading); }
+
+        /* Card */
+        .card { background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius); overflow:hidden; transition:border-color .2s; animation:fadeIn .3s ease forwards; }
+        .card:hover { border-color:rgba(99,102,241,.3); }
+        .card-header { padding:16px 20px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; }
+        .card-title { font-size:15px; font-weight:600; color:var(--text-heading); display:flex; align-items:center; gap:10px; }
+        .card-title i { color:var(--primary); font-size:18px; }
+        .card-body { padding:24px; }
+
+        /* Form */
+        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+        .form-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px; }
+        .form-group { display:flex; flex-direction:column; gap:6px; }
+        label { font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
+        input, select { width:100%; padding:10px 14px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:8px; color:var(--text-main); font-family:var(--font); font-size:14px; outline:none; transition:all .2s; }
+        input::placeholder { color:#4a5072; }
+        input:focus, select:focus { border-color:var(--border-focus); box-shadow:0 0 0 3px var(--primary-glow); }
+        select option { background:var(--bg-card); color:var(--text-main); }
+
+        .btn { padding:10px 20px; border:none; border-radius:8px; font-family:var(--font); font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; display:inline-flex; align-items:center; gap:8px; }
+        .btn-primary { background:var(--primary); color:#fff; }
+        .btn-primary:hover { background:var(--primary-hover); box-shadow:0 4px 16px var(--primary-glow); transform:translateY(-1px); }
+        .btn-primary:disabled { opacity:.5; cursor:not-allowed; transform:none; box-shadow:none; }
+        .btn-ghost { background:transparent; color:var(--primary); border:1px solid var(--border-color); }
+        .btn-ghost:hover { border-color:var(--primary); background:rgba(99,102,241,.06); }
+        .btn-success { background:var(--green-bg); color:var(--green); border:1px solid rgba(34,197,94,.2); }
+        .btn-success:hover { background:rgba(34,197,94,.2); }
+        .btn-sm { padding:6px 12px; font-size:12px; border-radius:6px; }
+        .btn-danger { background:var(--red-bg); color:var(--red); border:1px solid rgba(239,68,68,.2); }
+        .btn-danger:hover { background:rgba(239,68,68,.2); }
+
+        /* Alert */
+        .alert { padding:12px 16px; border-radius:8px; font-size:13px; font-weight:500; display:none; align-items:center; gap:10px; margin-bottom:16px; }
+        .alert.success { display:flex; background:var(--green-bg); color:var(--green); border:1px solid rgba(34,197,94,.2); }
+        .alert.error { display:flex; background:var(--red-bg); color:var(--red); border:1px solid rgba(239,68,68,.2); }
+
+        /* Table */
+        .table-wrap { overflow-x:auto; }
+        table { width:100%; border-collapse:collapse; }
+        th { text-align:left; padding:12px 16px; font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border-color); background:rgba(255,255,255,.02); }
+        td { padding:12px 16px; font-size:13px; border-bottom:1px solid rgba(255,255,255,.04); }
+        tr:hover td { background:rgba(99,102,241,.03); }
+
+        .search-bar { display:flex; align-items:center; gap:10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:8px; padding:0 14px; transition:border-color .2s; }
+        .search-bar:focus-within { border-color:var(--border-focus); }
+        .search-bar i { color:var(--text-muted); font-size:18px; }
+        .search-bar input { border:none; background:transparent; padding:10px 0; box-shadow:none; }
+        .search-bar input:focus { box-shadow:none; }
+
+        .verificado-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:600; }
+        .verificado-si { background:var(--green-bg); color:var(--green); }
+        .verificado-no { background:var(--amber-bg); color:var(--amber); }
+
+        @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        @media(max-width:900px) { .sidebar{display:none} .form-grid,.form-grid-3{grid-template-columns:1fr} }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="logo"><i class="ph-fill ph-receipt"></i><span>Expensify Hub</span></div>
+        <nav class="sidebar-nav">
+            <a href="/" class="nav-item"><i class="ph ph-house"></i> Resumen</a>
+            <a href="/terceros.html" class="nav-item active"><i class="ph ph-address-book"></i> Directorio de Terceros</a>
+            <a href="/usuarios.html" class="nav-item" id="nav-usuarios" style="display:none;"><i class="ph ph-buildings"></i> Usuarios del Sistema</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-header">
+            <h1>Directorio de Terceros</h1>
+            <div class="header-right">
+                <span class="user-tag" id="user-name-display"></span>
+            </div>
+        </header>
+
+        <div class="dashboard-content">
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab-btn active" id="tab-proveedor" onclick="setTab('proveedor')">
+                    <i class="ph ph-building"></i> Proveedores
+                    <span class="badge" id="badge-proveedor"></span>
+                </button>
+                <button class="tab-btn" id="tab-cliente" onclick="setTab('cliente')">
+                    <i class="ph ph-users"></i> Clientes
+                    <span class="badge" id="badge-cliente"></span>
+                </button>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-label"><i class="ph ph-users"></i> <span id="stat-label">Total Proveedores</span></div>
+                    <div class="stat-value" id="stat-total">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label"><i class="ph ph-warning-circle" style="color:var(--amber)"></i> Pendientes de Verificación</div>
+                    <div class="stat-value" style="color:var(--amber)" id="stat-pendientes">0</div>
+                </div>
+            </div>
+
+            <!-- Formulario (solo contador) -->
+            <div class="card" id="card-form">
+                <div class="card-header">
+                    <h2 class="card-title"><i class="ph ph-user-plus"></i> <span id="form-title">Registrar Nuevo Proveedor</span></h2>
+                </div>
+                <div class="card-body">
+                    <div id="alert-box" class="alert"></div>
+                    <form id="form-tercero">
+                        <div class="form-grid" style="margin-bottom:18px;">
+                            <div class="form-group">
+                                <label>Nombre o Razón Social</label>
+                                <input type="text" id="nombre" required placeholder="Ej. Empresa S.A.S / Juan Pérez">
+                            </div>
+                            <div class="form-group">
+                                <label>Identificación (NIT/Cédula)</label>
+                                <input type="text" id="identificacion" placeholder="Ej. 900.123.456-7">
+                            </div>
+                        </div>
+                        <div class="form-grid-3" style="margin-bottom:22px;">
+                            <div class="form-group">
+                                <label>Correo Electrónico</label>
+                                <input type="email" id="email" placeholder="correo@empresa.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Teléfono</label>
+                                <input type="tel" id="telefono" placeholder="+57 315 123 4567">
+                            </div>
+                            <div class="form-group">
+                                <label>Dirección</label>
+                                <input type="text" id="direccion" placeholder="Ej. Cra 15 #45-30">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="btn-submit">
+                            <i class="ph ph-plus-circle"></i> <span id="btn-label">Guardar Proveedor</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tabla -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title"><i class="ph ph-list-bullets"></i> <span id="table-title">Directorio de Proveedores</span></h2>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <div class="search-bar">
+                            <i class="ph ph-magnifying-glass"></i>
+                            <input type="text" id="search-input" placeholder="Buscar...">
+                        </div>
+                        <button class="btn btn-ghost btn-sm" onclick="fetchTerceros()">
+                            <i class="ph ph-arrows-clockwise"></i> Actualizar
+                        </button>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Identificación</th>
+                                <th>Correo / Teléfono</th>
+                                <th>Dirección</th>
+                                <th>Estado</th>
+                                <th>Registro</th>
+                                <th style="text-align:center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-terceros"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+<script>
+    const token = localStorage.getItem('auth_token');
+    if (!token) window.location.replace('/login.html');
+    const authUser = JSON.parse(localStorage.getItem('auth_user') || '{}');
+    const esContador = authUser.rol === 'contador';
+
+    if (authUser.rol === 'admin') {
+        document.getElementById('nav-usuarios').style.display = 'flex';
+    }
+    document.getElementById('user-name-display').textContent = authUser.nombre || authUser.correo;
+
+    // Solo el contador puede crear terceros
+    if (!esContador) {
+        document.getElementById('card-form').style.display = 'none';
+    }
+
+    const originalFetch = window.fetch;
+    window.fetch = function(url, options = {}) {
+        options.headers = options.headers || {};
+        options.headers['Authorization'] = `Bearer ${token}`;
+        return originalFetch(url, options);
+    };
+
+    let currentTab = 'proveedor';
+    let allTerceros = { proveedor: [], cliente: [] };
+
+    function setTab(tab) {
+        currentTab = tab;
+        document.getElementById('tab-proveedor').classList.toggle('active', tab === 'proveedor');
+        document.getElementById('tab-cliente').classList.toggle('active', tab === 'cliente');
+
+        const isProveedor = tab === 'proveedor';
+        document.getElementById('stat-label').textContent = isProveedor ? 'Total Proveedores' : 'Total Clientes';
+        document.getElementById('form-title').textContent = isProveedor ? 'Registrar Nuevo Proveedor' : 'Registrar Nuevo Cliente';
+        document.getElementById('btn-label').textContent = isProveedor ? 'Guardar Proveedor' : 'Guardar Cliente';
+        document.getElementById('table-title').textContent = isProveedor ? 'Directorio de Proveedores' : 'Directorio de Clientes';
+
+        document.getElementById('form-tercero').reset();
+        document.getElementById('alert-box').className = 'alert';
+        renderTerceros(allTerceros[tab]);
+        updateStats();
+    }
+
+    function updateStats() {
+        const list = allTerceros[currentTab];
+        document.getElementById('stat-total').textContent = list.length;
+        const pendientes = list.filter(t => !t.verificado).length;
+        document.getElementById('stat-pendientes').textContent = pendientes;
+
+        // Badge en tab
+        const provPend = allTerceros.proveedor.filter(t => !t.verificado).length;
+        const cliPend = allTerceros.cliente.filter(t => !t.verificado).length;
+        const bp = document.getElementById('badge-proveedor');
+        const bc = document.getElementById('badge-cliente');
+        bp.textContent = provPend || '';
+        bp.classList.toggle('visible', provPend > 0);
+        bc.textContent = cliPend || '';
+        bc.classList.toggle('visible', cliPend > 0);
+    }
+
+    function renderTerceros(list) {
+        const tbody = document.getElementById('lista-terceros');
+        tbody.innerHTML = '';
+        if (!list.length) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:32px;">Sin registros</td></tr>`;
+            return;
+        }
+        list.forEach(t => {
+            const verificadoHTML = t.verificado
+                ? `<span class="verificado-badge verificado-si"><i class="ph ph-check-circle"></i> Verificado</span>`
+                : `<span class="verificado-badge verificado-no"><i class="ph ph-clock"></i> Pendiente</span>`;
+
+            const accionesHTML = esContador
+                ? `
+                    ${!t.verificado ? `<button class="btn btn-sm btn-success" onclick="aprobarTercero('${t.id}')" title="Aprobar"><i class="ph ph-check"></i></button>` : ''}
+                    <button class="btn btn-sm btn-danger" onclick="deleteTercero('${t.id}')" title="Eliminar"><i class="ph ph-trash"></i></button>
+                  `
+                : '—';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-weight:600;color:var(--text-heading);">${t.nombre}</td>
+                <td>${t.identificacion || '—'}</td>
+                <td>
+                    <div>${t.email || '—'}</div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${t.telefono || '—'}</div>
+                </td>
+                <td>${t.direccion || '—'}</td>
+                <td>${verificadoHTML}</td>
+                <td style="color:var(--text-muted);font-size:12px;">${t.created_at ? new Date(t.created_at).toLocaleDateString('es-CO') : '—'}</td>
+                <td style="text-align:center;display:flex;gap:6px;justify-content:center;">${accionesHTML}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function fetchTerceros() {
+        try {
+            const [respProv, respCli] = await Promise.all([
+                fetch('/api/terceros?tipo=proveedor'),
+                fetch('/api/terceros?tipo=cliente'),
+            ]);
+            allTerceros.proveedor = respProv.ok ? await respProv.json() : [];
+            allTerceros.cliente = respCli.ok ? await respCli.json() : [];
+            renderTerceros(allTerceros[currentTab]);
+            updateStats();
+        } catch (err) {
+            console.error('Error cargando terceros:', err);
+        }
+    }
+
+    window.aprobarTercero = async function(id) {
+        try {
+            const res = await fetch(`/api/terceros/${id}/aprobar`, { method: 'PATCH' });
+            if (res.ok) {
+                showAlert('Tercero verificado correctamente', 'success');
+                fetchTerceros();
+            } else {
+                const d = await res.json();
+                showAlert(d.error || 'Error al aprobar', 'error');
+            }
+        } catch(e) { console.error(e); }
+    };
+
+    window.deleteTercero = async function(id) {
+        if (!confirm('¿Eliminar este tercero?')) return;
+        try {
+            const res = await fetch(`/api/terceros/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                showAlert('Tercero eliminado', 'success');
+                fetchTerceros();
+            } else {
+                const d = await res.json();
+                showAlert(d.error || 'Error al eliminar', 'error');
+            }
+        } catch(e) { console.error(e); }
+    };
+
+    document.getElementById('search-input').addEventListener('input', function() {
+        const q = this.value.toLowerCase();
+        const filtered = allTerceros[currentTab].filter(t =>
+            (t.nombre||'').toLowerCase().includes(q) ||
+            (t.email||'').toLowerCase().includes(q) ||
+            (t.identificacion||'').toLowerCase().includes(q)
+        );
+        renderTerceros(filtered);
+    });
+
+    document.getElementById('form-tercero').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-submit');
+        btn.disabled = true;
+        document.getElementById('alert-box').className = 'alert';
+
+        const payload = {
+            tipo: currentTab,
+            nombre: document.getElementById('nombre').value.trim(),
+            identificacion: document.getElementById('identificacion').value.trim(),
+            email: document.getElementById('email').value.trim().toLowerCase(),
+            telefono: document.getElementById('telefono').value.trim(),
+            direccion: document.getElementById('direccion').value.trim(),
+        };
+
+        try {
+            const res = await fetch('/api/terceros', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                showAlert(`${currentTab === 'proveedor' ? 'Proveedor' : 'Cliente'} registrado con éxito`, 'success');
+                document.getElementById('form-tercero').reset();
+                fetchTerceros();
+            } else {
+                showAlert(data.error || 'No se pudo guardar', 'error');
+            }
+        } catch(err) {
+            showAlert('Error de conexión', 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    function showAlert(msg, type) {
+        const box = document.getElementById('alert-box');
+        box.textContent = msg;
+        box.className = `alert ${type}`;
+        if (type === 'success') setTimeout(() => { box.className = 'alert'; }, 4000);
+    }
+
+    fetchTerceros();
+</script>
+</body>
+</html>

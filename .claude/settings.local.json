@@ -2,7 +2,23 @@
   "permissions": {
     "allow": [
       "Bash(curl -s http://localhost:3000/healthz)",
-      "PowerShell(Start-Sleep 5; $status = Invoke-WebRequest -Uri \"http://localhost:3000/healthz\" -UseBasicParsing; \"Status: $\\($status.StatusCode\\) - $\\($status.Content\\)\"; Get-Content \"C:\\\\Temp\\\\app_err.log\" -ErrorAction SilentlyContinue | Select-Object -Last 20)"
+      "PowerShell(Start-Sleep 5; $status = Invoke-WebRequest -Uri \"http://localhost:3000/healthz\" -UseBasicParsing; \"Status: $\\($status.StatusCode\\) - $\\($status.Content\\)\"; Get-Content \"C:\\\\Temp\\\\app_err.log\" -ErrorAction SilentlyContinue | Select-Object -Last 20)",
+      "Bash(start http://localhost:3000)",
+      "Bash(npm list *)",
+      "Bash(npm uninstall *)",
+      "Bash(node --check index.js)",
+      "Bash(node --check gemini.js)",
+      "Bash(node --input-type=module)",
+      "PowerShell(Stop-Process -Force)",
+      "PowerShell(Start-Process node -ArgumentList \"index.js\" -WorkingDirectory \"d:\\\\Escritorio\\\\Antigravity\\\\App De Facturacion\" -NoNewWindow -RedirectStandardOutput \"server.log\" -RedirectStandardError \"server-err.log\")",
+      "Bash(npm show *)",
+      "Bash(node -e \"const v=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const arr=JSON.parse\\(v\\); const stable=arr.filter\\(x=>!x.includes\\('-'\\)\\); console.log\\('Ultima estable:', stable[stable.length-1]\\); console.log\\('Ultima RC:', arr[arr.length-1]\\);\")",
+      "Bash(node --input-type=module --eval \"import { Browsers } from '@whiskeysockets/baileys'; console.log\\('Browsers.ubuntu:', JSON.stringify\\(Browsers.ubuntu\\('Chrome'\\)\\)\\)\")",
+      "Bash(node --check whatsapp.js)",
+      "Bash(tasklist /FI \"IMAGENAME eq node.exe\")",
+      "Bash(node index.js)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(echo \"Servidor iniciado PID: $!\")"
     ]
   }
 }

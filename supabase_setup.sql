@@ -174,3 +174,76 @@ create policy "Usuarios eliminan clientes de su empresa" on public.clientes
   for delete using (
     empresa_id = (select empresa_id from public.profiles where id = auth.uid())
   );
+
+-- ===========================================================================
+-- MIGRACIÓN v2: Terceros, Scoring, Roles Contador/Auxiliar
+-- ===========================================================================
+
+-- 6. Crear tabla terceros (unifica proveedores y clientes)
+create table if not exists public.terceros (
+  id uuid default gen_random_uuid() primary key,
+  empresa_id text not null,
+  tipo text check (tipo in ('proveedor','cliente')) not null,
+  nombre text not null,
+  identificacion text,
+  email text,
+  telefono text,
+  direccion text,
+  verificado boolean default false,
+  created_at timestamp with time zone default now()
+);
+
+-- Migrar registros existentes de clientes → terceros como proveedores verificados
+insert into public.terceros (id, empresa_id, tipo, nombre, identificacion, email, telefono, direccion, verificado, created_at)
+select id, empresa_id, 'proveedor', nombre, identificacion, email, telefono, direccion, true, created_at
+from public.clientes
+on conflict (id) do nothing;
+
+-- Índices terceros
+create index if not exists idx_terceros_empresa_tipo on public.terceros(empresa_id, tipo);
+create unique index if not exists unique_tercero_empresa_identificacion
+  on public.terceros(empresa_id, identificacion)
+  where identificacion is not null;
+
+-- RLS terceros
+alter table public.terceros enable row level security;
+drop policy if exists "empresa access terceros" on public.terceros;
+create policy "empresa access terceros" on public.terceros
+  for all
+  using (empresa_id = (select empresa_id from public.profiles where id = auth.uid()))
+  with check (empresa_id = (select empresa_id from public.profiles where id = auth.uid()));
+
+
+-- 7. Ampliar tabla facturas con campos de scoring e integridad
+alter table public.facturas
+  add column if not exists score integer default 0,
+  add column if not exists clasificacion text default 'BAJA',
+  add column if not exists duplicado boolean default false,
+  add column if not exists tercero_id uuid references public.terceros(id),
+  add column if not exists nit_emisor text,
+  add column if not exists razon_social_emisor text,
+  add column if not exists iva numeric,
+  add column if not exists total numeric;
+
+-- Eliminar constraint viejo ANTES de migrar estados
+alter table public.facturas drop constraint if exists facturas_estado_check;
+
+-- Migrar estados legacy
+update public.facturas set estado = 'lista' where estado in ('Aprobado', 'Sincronizado');
+update public.facturas set estado = 'Nuevo' where estado in ('Revisado', 'Rechazado');
+
+-- Aplicar CHECK de estados unificado
+alter table public.facturas add constraint facturas_estado_check
+  check (estado in (
+    'Nuevo',
+    'pendiente_auxiliar',
+    'pendiente_contador',
+    'lista',
+    'lista_para_erp'
+  ));
+
+-- Índices facturas
+create unique index if not exists unique_factura_empresa_cufe
+  on public.facturas(empresa_id, cufe)
+  where cufe is not null;
+create index if not exists idx_facturas_empresa on public.facturas(empresa_id);

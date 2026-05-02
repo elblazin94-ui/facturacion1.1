@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Expensify Hub - Dashboard</title>
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -22,15 +24,15 @@
             --primary-blue: #0f62fe;
             --sidebar-active-bg: #e0f2fe;
             --sidebar-active-text: #0284c7;
-            
+
             --card-header-bg: #f1f5f9;
             --card-border: #e2e8f0;
-            
+
             --green-text: #16a34a;
             --green-bg: #dcfce7;
             --red-text: #dc2626;
             --red-bg: #fee2e2;
-            
+
             --font-main: 'Plus Jakarta Sans', sans-serif;
         }
 
@@ -212,7 +214,7 @@
             background: white;
             border: 1px solid var(--border-color);
             border-radius: 10px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
             width: 220px;
             z-index: 100;
             overflow: hidden;
@@ -225,8 +227,15 @@
         }
 
         @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-8px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .dropdown-user-info {
@@ -298,7 +307,7 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
         .stat-title {
@@ -337,9 +346,17 @@
             border-color: #fed7d7;
         }
 
-        .text-red { color: var(--red-text); }
-        .text-green { color: var(--green-text); }
-        .text-blue { color: var(--sidebar-active-text); }
+        .text-red {
+            color: var(--red-text);
+        }
+
+        .text-green {
+            color: var(--green-text);
+        }
+
+        .text-blue {
+            color: var(--sidebar-active-text);
+        }
 
         /* Content Grid */
         .content-grid {
@@ -356,7 +373,7 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
         .card-header {
@@ -393,7 +410,7 @@
             max-width: 100%;
             max-height: 400px;
             object-fit: contain;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             background-color: white;
             padding: 10px;
         }
@@ -418,7 +435,7 @@
             border-radius: 50%;
             overflow: hidden;
         }
-        
+
         .sender-avatar img {
             width: 100%;
             height: 100%;
@@ -577,11 +594,11 @@
             gap: 12px;
             font-size: 20px;
         }
-        
+
         .docs-icons i {
             cursor: pointer;
         }
-        
+
         /* WhatsApp QR Card */
         .whatsapp-card {
             background: linear-gradient(135deg, #1a2e1a 0%, #0f1a0f 100%);
@@ -595,30 +612,42 @@
             position: relative;
             overflow: hidden;
         }
+
         .whatsapp-card::before {
             content: '';
             position: absolute;
-            top: -60px; right: -60px;
-            width: 200px; height: 200px;
-            background: radial-gradient(circle, rgba(37,211,102,.1) 0%, transparent 70%);
+            top: -60px;
+            right: -60px;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(37, 211, 102, .1) 0%, transparent 70%);
             border-radius: 50%;
         }
+
         .wa-qr-box {
-            width: 200px; height: 200px;
+            width: 200px;
+            height: 200px;
             background: white;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            box-shadow: 0 4px 20px rgba(0,0,0,.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, .3);
             overflow: hidden;
         }
+
         .wa-qr-box img {
-            width: 100%; height: 100%;
+            width: 100%;
+            height: 100%;
             object-fit: contain;
         }
-        .wa-info { flex: 1; z-index: 1; }
+
+        .wa-info {
+            flex: 1;
+            z-index: 1;
+        }
+
         .wa-info h3 {
             font-size: 18px;
             font-weight: 700;
@@ -628,12 +657,14 @@
             align-items: center;
             gap: 10px;
         }
+
         .wa-info p {
             font-size: 14px;
             color: #8cbf8c;
             line-height: 1.6;
             margin-bottom: 12px;
         }
+
         .wa-status {
             display: inline-flex;
             align-items: center;
@@ -643,49 +674,92 @@
             font-size: 13px;
             font-weight: 600;
         }
+
         .wa-status.waiting {
-            background: rgba(245,158,11,.15);
+            background: rgba(245, 158, 11, .15);
             color: #f59e0b;
         }
+
         .wa-status.connected {
-            background: rgba(34,197,94,.15);
+            background: rgba(34, 197, 94, .15);
             color: #22c55e;
         }
+
         .wa-status.disconnected {
-            background: rgba(239,68,68,.15);
+            background: rgba(239, 68, 68, .15);
             color: #ef4444;
         }
+
         .wa-pulse {
-            width: 8px; height: 8px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             animation: pulse 1.5s ease-in-out infinite;
         }
-        .wa-pulse.waiting { background: #f59e0b; }
-        .wa-pulse.connected { background: #22c55e; }
-        .wa-pulse.disconnected { background: #ef4444; }
+
+        .wa-pulse.waiting {
+            background: #f59e0b;
+        }
+
+        .wa-pulse.connected {
+            background: #22c55e;
+        }
+
+        .wa-pulse.disconnected {
+            background: #ef4444;
+        }
+
         @keyframes pulse {
-            0%,100% { opacity: 1; transform: scale(1); }
-            50% { opacity: .5; transform: scale(1.3); }
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: .5;
+                transform: scale(1.3);
+            }
         }
+
         .wa-steps {
-            display: flex; flex-direction: column; gap: 8px; margin-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 12px;
         }
+
         .wa-step {
-            display: flex; align-items: center; gap: 10px;
-            font-size: 13px; color: #8cbf8c;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: #8cbf8c;
         }
+
         .wa-step-num {
-            width: 22px; height: 22px;
-            background: rgba(37,211,102,.2);
+            width: 22px;
+            height: 22px;
+            background: rgba(37, 211, 102, .2);
             border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             animation: slideIn 0.3s ease;
         }
 
         @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
 
         /* Analytics Section Styles */
@@ -695,12 +769,14 @@
             gap: 20px;
             margin-bottom: 24px;
         }
+
         .chart-card {
             background: white;
             border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 20px;
         }
+
         .chart-card h4 {
             font-size: 14px;
             font-weight: 600;
@@ -710,7 +786,7 @@
             align-items: center;
             gap: 8px;
         }
-        
+
         /* Toast Notification */
         #toast-container {
             position: fixed;
@@ -718,6 +794,7 @@
             right: 24px;
             z-index: 9999;
         }
+
         .toast {
             background: white;
             border: 1px solid var(--border-color);
@@ -732,22 +809,39 @@
             min-width: 300px;
             animation: toastIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
+
         @keyframes toastIn {
-            from { transform: translateY(-20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         @media (max-width: 1200px) {
-            .analytics-grid { grid-template-columns: 1fr; }
+            .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         @media (max-width: 1024px) {
             .content-grid {
                 grid-template-columns: 1fr;
             }
+
             .stats-row {
                 grid-template-columns: repeat(2, 1fr);
             }
+
             .whatsapp-card {
                 flex-direction: column;
                 text-align: center;
@@ -755,6 +849,7 @@
         }
     </style>
 </head>
+
 <body>
 
     <!-- Sidebar -->
@@ -767,20 +862,11 @@
             <a href="/" class="nav-item active">
                 <i class="ph ph-house"></i> Resumen
             </a>
-            <a href="#" class="nav-item">
-                <i class="ph ph-file-text"></i> Facturas
+            <a href="/terceros.html" class="nav-item">
+                <i class="ph ph-address-book"></i> Directorio de Terceros
             </a>
-            <a href="#" class="nav-item">
-                <i class="ph ph-chart-line-up"></i> Reportes
-            </a>
-            <a href="#" class="nav-item" id="nav-empleados" style="display: none;">
-                <i class="ph ph-users"></i> Empleados
-            </a>
-            <a href="/usuarios" class="nav-item" id="nav-usuarios" style="display: none;">
-                <i class="ph ph-buildings"></i> Gestión Clientes
-            </a>
-            <a href="#" class="nav-item">
-                <i class="ph ph-gear"></i> Configuración
+            <a href="/usuarios.html" class="nav-item" id="nav-usuarios" style="display: none;">
+                <i class="ph ph-buildings"></i> Usuarios del Sistema
             </a>
         </nav>
     </aside>
@@ -797,14 +883,15 @@
                 </div>
                 <div id="toast-container"></div>
 
-    <div class="container">
+                <div class="container">
                     <i class="ph ph-question"></i>
                 </div>
                 <div class="avatar-dropdown" id="user-menu-trigger" style="position:relative; cursor:pointer;">
                     <div class="avatar">
                         <i class="ph-fill ph-user"></i>
                     </div>
-                    <span id="user-name-display" style="font-size:14px;font-weight:600;color:var(--text-main);margin-left:6px;"></span>
+                    <span id="user-name-display"
+                        style="font-size:14px;font-weight:600;color:var(--text-main);margin-left:6px;"></span>
                     <i class="ph ph-caret-down"></i>
                     <div class="dropdown-menu" id="user-dropdown">
                         <div class="dropdown-user-info">
@@ -828,7 +915,7 @@
         <div class="dashboard-content">
             <!-- Stats Row -->
             <!-- Statistics Cards -->
-            <div class="stats-grid">
+            <div class="stats-row">
                 <div class="stat-card">
                     <div class="stat-title">Facturas Procesadas (Total)</div>
                     <div class="stat-value-container">
@@ -867,15 +954,20 @@
                 </div>
                 <div class="wa-info">
                     <h3><i class="ph-fill ph-whatsapp-logo"></i> Vincula tu WhatsApp</h3>
-                    <p>Conecta tu cuenta de WhatsApp para recibir y consolidar facturas automáticamente en este dashboard. La IA de Gemini extraerá los datos de cada factura que envíes.</p>
-                    <div id="wa-status-badge"><span class="wa-status disconnected"><span class="wa-pulse disconnected"></span> Desconectado</span></div>
+                    <p>Conecta tu cuenta de WhatsApp para recibir y consolidar facturas automáticamente en este
+                        dashboard. La IA de Gemini extraerá los datos de cada factura que envíes.</p>
+                    <div id="wa-status-badge"><span class="wa-status disconnected"><span
+                                class="wa-pulse disconnected"></span> Desconectado</span></div>
                     <div class="wa-steps" id="wa-steps">
                         <div class="wa-step"><span class="wa-step-num">1</span> Abre WhatsApp en tu celular</div>
-                        <div class="wa-step"><span class="wa-step-num">2</span> Ve a Ajustes → Dispositivos vinculados</div>
-                        <div class="wa-step"><span class="wa-step-num">3</span> Escanea el código QR que aparece aquí</div>
+                        <div class="wa-step"><span class="wa-step-num">2</span> Ve a Ajustes → Dispositivos vinculados
+                        </div>
+                        <div class="wa-step"><span class="wa-step-num">3</span> Escanea el código QR que aparece aquí
+                        </div>
                     </div>
                     <div style="margin-top:14px;" id="wa-actions">
-                        <button id="btn-wa-reconnect" onclick="reconectarWhatsApp()" style="display:none;padding:8px 18px;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.25);border-radius:8px;font-family:var(--font-main);font-size:13px;font-weight:600;cursor:pointer;">
+                        <button id="btn-wa-reconnect" onclick="reconectarWhatsApp()"
+                            style="display:none;padding:8px 18px;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.25);border-radius:8px;font-family:var(--font-main);font-size:13px;font-weight:600;cursor:pointer;">
                             <i class="ph ph-arrows-clockwise"></i> Desvincular y Generar Nuevo QR
                         </button>
                     </div>
@@ -893,9 +985,11 @@
                         <div class="card-body invoice-image-container" id="invoice-img-container">
                             <div id="no-invoice-placeholder" style="text-align:center; color:var(--text-muted);">
                                 <i class="ph ph-file-dashed" style="font-size:64px; color:#cbd5e1;"></i>
-                                <p style="margin-top:12px; font-size:14px;">Aún no hay facturas recibidas.<br>Envía una foto de factura por WhatsApp.</p>
+                                <p style="margin-top:12px; font-size:14px;">Aún no hay facturas recibidas.<br>Envía una
+                                    foto de factura por WhatsApp.</p>
                             </div>
-                            <img src="" alt="Última Factura" class="invoice-image" id="latest-invoice-img" style="display:none;">
+                            <img src="" alt="Última Factura" class="invoice-image" id="latest-invoice-img"
+                                style="display:none;">
                         </div>
                         <div class="card-footer">
                             <div class="sender-info">
@@ -923,9 +1017,11 @@
                             <h2 class="card-title">Datos Extraídos por Google AI</h2>
                         </div>
                         <div class="card-body extracted-data" id="extracted-data-body">
-                            <div id="no-data-placeholder" style="text-align:center; color:var(--text-muted); padding:20px 0;">
+                            <div id="no-data-placeholder"
+                                style="text-align:center; color:var(--text-muted); padding:20px 0;">
                                 <i class="ph ph-robot" style="font-size:40px; color:#cbd5e1;"></i>
-                                <p style="margin-top:8px; font-size:13px;">Los datos extraídos por IA<br>aparecerán aquí cuando llegue una factura.</p>
+                                <p style="margin-top:8px; font-size:13px;">Los datos extraídos por IA<br>aparecerán aquí
+                                    cuando llegue una factura.</p>
                             </div>
                             <div id="extracted-data-fields" style="display:none;">
                                 <div class="data-row">
@@ -970,91 +1066,97 @@
                                 </div>
                                 <div class="data-row" style="border-bottom: none; padding-bottom: 0;">
                                     <span class="data-label">CUFE:</span>
-                                    <span class="data-value" id="data-cufe" style="font-size: 10px; word-break: break-all; opacity: 0.7;">—</span>
+                                    <span class="data-value" id="data-cufe"
+                                        style="font-size: 10px; word-break: break-all; opacity: 0.7;">—</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Analytics Dashboard -->
-            <div class="analytics-grid">
-                <div class="chart-card">
-                    <h4><i class="ph-bold ph-chart-pie-slice"></i> Gastos por Categoría</h4>
-                    <div style="height: 200px; display: flex; align-items: center; justify-content: center;">
-                        <canvas id="categoryChart"></canvas>
-                    </div>
-                </div>
-                <div class="chart-card">
-                    <h4><i class="ph-bold ph-chart-line-up"></i> Tendencia de Gastos</h4>
-                    <div style="height: 200px; display: flex; align-items: center; justify-content: center;">
-                        <canvas id="trendChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Statistics Cards -->
-                    <div style="display:flex; gap:12px;">
-                        <button onclick="exportarCSV()" style="padding: 8px 16px; background: white; border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; font-family: var(--font-main); font-weight: 500; display: flex; align-items: center; gap: 8px; font-size: 13px;">
-                            <i class="ph-bold ph-file-csv" style="color: #10b981; font-size: 18px;"></i> Exportar Excel
-                        </button>
-                        <div class="tabs">
-                            <button id="tab-pendientes" onclick="setTab('pendientes')">Pendientes</button>
-                            <button id="tab-historial" onclick="setTab('historial')">Historial</button>
+                    <div class="analytics-grid">
+                        <div class="chart-card">
+                            <h4><i class="ph-bold ph-chart-pie-slice"></i> Gastos por Categoría</h4>
+                            <div style="height: 200px; display: flex; align-items: center; justify-content: center;">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <h4><i class="ph-bold ph-chart-line-up"></i> Tendencia de Gastos</h4>
+                            <div style="height: 200px; display: flex; align-items: center; justify-content: center;">
+                                <canvas id="trendChart"></canvas>
+                            </div>
                         </div>
                     </div>
-                        <div class="card-body validation-status" id="validation-card-body">
-                            <div id="validation-placeholder" style="text-align:center; color:var(--text-muted); padding:20px 0; width:100%;">
-                                <i class="ph ph-shield-slash" style="font-size:40px; color:#cbd5e1;"></i>
-                                <p style="margin-top:8px; font-size:13px;">Estado de validación disponible<br>al recibir la primera factura.</p>
-                            </div>
-                            <div id="validation-fields" style="display:none; width:100%;">
-                                <div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <div class="validation-checks">
-                                        <div class="check-item">Proveedor detectado: <span class="check-result" id="val-proveedor"></span></div>
-                                        <div class="check-item">Fecha registrada: <span class="check-result" id="val-fecha"></span></div>
-                                        <div class="check-item">Monto registrado: <span class="check-result" id="val-monto"></span></div>
-                                    </div>
-                                    <div class="validation-badge-container">
-                                        <span class="status-badge" id="val-badge">—</span>
-                                    </div>
+
+                    <!-- Export Button -->
+                    <div style="display:flex; gap:12px;">
+                        <button onclick="exportarCSV()"
+                            style="padding: 8px 16px; background: white; border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; font-family: var(--font-main); font-weight: 500; display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                            <i class="ph-bold ph-file-csv" style="color: #10b981; font-size: 18px;"></i> Exportar Excel
+                        </button>
+                    </div>
+                    <div class="card-body validation-status" id="validation-card-body">
+                        <div id="validation-placeholder"
+                            style="text-align:center; color:var(--text-muted); padding:20px 0; width:100%;">
+                            <i class="ph ph-shield-slash" style="font-size:40px; color:#cbd5e1;"></i>
+                            <p style="margin-top:8px; font-size:13px;">Estado de validación disponible<br>al recibir la
+                                primera factura.</p>
+                        </div>
+                        <div id="validation-fields" style="display:none; width:100%;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div class="validation-checks">
+                                    <div class="check-item">Proveedor detectado: <span class="check-result"
+                                            id="val-proveedor"></span></div>
+                                    <div class="check-item">Fecha registrada: <span class="check-result"
+                                            id="val-fecha"></span></div>
+                                    <div class="check-item">Monto registrado: <span class="check-result"
+                                            id="val-monto"></span></div>
+                                </div>
+                                <div class="validation-badge-container">
+                                    <span class="status-badge" id="val-badge">—</span>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- History Table Card -->
-                    <div class="card history-card">
-                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                            <h2 class="card-title">Facturas</h2>
-                            <div class="tabs" style="display: flex; gap: 8px;">
-                                <button onclick="setTab('pendientes')" id="tab-pendientes" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--sidebar-active-bg); color: var(--sidebar-active-text); font-family: var(--font-main); font-weight: 600; cursor: pointer;">Pendientes</button>
-                                <button onclick="setTab('historial')" id="tab-historial" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: white; color: var(--text-muted); font-family: var(--font-main); font-weight: 600; cursor: pointer;">Historial (ERP)</button>
-                            </div>
+                <!-- History Table Card -->
+                <div class="card history-card" style="grid-column: 1 / -1;">
+                    <div class="card-header"
+                        style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2 class="card-title">Facturas</h2>
+                        <div class="tabs" style="display: flex; gap: 8px;">
+                            <button onclick="setTab('pendientes')" id="tab-pendientes"
+                                style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--sidebar-active-bg); color: var(--sidebar-active-text); font-family: var(--font-main); font-weight: 600; cursor: pointer;">Pendientes</button>
+                            <button onclick="setTab('historial')" id="tab-historial"
+                                style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: white; color: var(--text-muted); font-family: var(--font-main); font-weight: 600; cursor: pointer;">Historial
+                                (ERP)</button>
                         </div>
-                        <div class="table-container">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Empleado</th>
-                                        <th>Fecha<br>Recibo</th>
-                                        <th>Proveedor</th>
-                                        <th>Total<br>(COP)</th>
-                                        <th>Estado</th>
-                                        <th style="text-align: center;">Documentos</th>
-                                        <th style="text-align: center;">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="facturas-body">
-                                    <tr id="empty-row">
-                                        <td colspan="8" style="text-align:center; padding:32px; color:var(--text-muted);">
-                                            <i class="ph ph-hourglass" style="font-size:32px;"></i>
-                                            <p style="margin-top:8px;">No hay facturas en esta sección aún.</p>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Empleado</th>
+                                    <th>Fecha<br>Recibo</th>
+                                    <th>Proveedor</th>
+                                    <th>Total<br>(COP)</th>
+                                    <th>Estado</th>
+                                    <th style="text-align: center;">Documentos</th>
+                                    <th style="text-align: center;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="facturas-body">
+                                <tr id="empty-row">
+                                    <td colspan="8" style="text-align:center; padding:32px; color:var(--text-muted);">
+                                        <i class="ph ph-hourglass" style="font-size:32px;"></i>
+                                        <p style="margin-top:8px;">No hay facturas en esta sección aún.</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -1075,10 +1177,9 @@
             document.getElementById('dropdown-name').textContent = authUser.nombre;
             document.getElementById('dropdown-role').textContent =
                 authUser.rol === 'admin' ? 'Administrador' : (authUser.rol === 'contador' ? 'Contador' : 'Empleado');
-                
+
             if (authUser.rol === 'admin') {
                 document.getElementById('nav-usuarios').style.display = 'flex';
-                document.getElementById('nav-empleados').style.display = 'flex';
             }
         }
 
@@ -1097,12 +1198,12 @@
             localStorage.removeItem('auth_user');
             try {
                 await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
-            } catch(e) {}
+            } catch (e) { }
             window.location.replace('/login.html');
         });
 
         // Cambiar propia contraseña
-        window.cambiarMiPassword = async function() {
+        window.cambiarMiPassword = async function () {
             const newPass = prompt('Ingresa tu nueva contraseña (mínimo 6 caracteres):');
             if (!newPass) return;
             if (newPass.length < 6) return alert('La contraseña debe tener al menos 6 caracteres.');
@@ -1110,7 +1211,7 @@
             try {
                 const res = await fetch('/api/perfil/password', {
                     method: 'PUT',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                     },
@@ -1119,12 +1220,12 @@
                 const data = await res.json();
                 if (res.ok) alert('✅ ' + data.message);
                 else alert('❌ ' + data.error);
-            } catch(e) { alert('❌ Error de red'); }
+            } catch (e) { alert('❌ Error de red'); }
         };
 
         // Agregar el token a todas las peticiones fetch
         const originalFetch = window.fetch;
-        window.fetch = function(url, options = {}) {
+        window.fetch = function (url, options = {}) {
             options.headers = options.headers || {};
             if (token) options.headers['Authorization'] = `Bearer ${token}`;
             return originalFetch(url, options);
@@ -1190,9 +1291,9 @@
         function updateTable(facturas) {
             const body = document.getElementById('facturas-body');
             const statCount = document.getElementById('stat-count');
-            
+
             body.innerHTML = '';
-            
+
             // Filter by tab
             const filtered = facturas.filter(f => {
                 if (currentTab === 'pendientes') return f.estado !== 'Sincronizado';
@@ -1201,6 +1302,15 @@
 
             // Mostrar las más recientes arriba
             const displayFacturas = [...filtered];
+
+            if (filtered.length === 0) {
+                const emptyTr = document.createElement('tr');
+                emptyTr.innerHTML = `<td colspan="8" style="text-align:center; padding:32px; color:var(--text-muted);">
+                    <i class="ph ph-hourglass" style="font-size:32px;"></i>
+                    <p style="margin-top:8px;">No hay facturas en esta sección aún.</p>
+                </td>`;
+                body.appendChild(emptyTr);
+            }
 
             displayFacturas.forEach((f, idx) => {
                 const row = document.createElement('tr');
@@ -1216,25 +1326,25 @@
                     // No activar si se hace clic en elementos interactivos dentro de la fila
                     if (e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.closest('a')) return;
                     selectedFacturaId = id;
-                    updateTable(allFacturas); 
+                    updateTable(allFacturas);
                 };
 
                 const fecha = f.fecha_factura ? new Date(f.fecha_factura).toLocaleDateString('es-ES') : '—';
                 const isAuxiliar = authUser.rol === 'auxiliar';
                 const isAdminOrContador = authUser.rol === 'admin' || authUser.rol === 'contador';
-                
+
                 const options = ['Nuevo', 'Revisado', 'Aprobado', 'Rechazado', 'Sincronizado'];
                 const estadoSelect = `
                     <select onchange="cambiarEstado('${id}', this.value)" style="padding: 6px; border-radius: 6px; border: 1px solid var(--border-color); font-family: var(--font-main);">
                         ${options.map(o => {
-                            // Auxiliar no puede marcar como Sincronizado
-                            const disabled = (isAuxiliar && o === 'Sincronizado') ? 'disabled' : '';
-                            const selected = (f.estado || 'Nuevo') === o ? 'selected' : '';
-                            return `<option value="${o}" ${selected} ${disabled}>${o}</option>`;
-                        }).join('')}
+                    // Auxiliar no puede marcar como Sincronizado
+                    const disabled = (isAuxiliar && o === 'Sincronizado') ? 'disabled' : '';
+                    const selected = (f.estado || 'Nuevo') === o ? 'selected' : '';
+                    return `<option value="${o}" ${selected} ${disabled}>${o}</option>`;
+                }).join('')}
                     </select>
                 `;
-                
+
                 let actionBtn = '';
                 if (isAdminOrContador) {
                     if (f.estado !== 'Sincronizado') {
@@ -1245,7 +1355,7 @@
                 } else {
                     actionBtn = '<span style="color:var(--text-muted); font-size: 12px;">Sin permisos</span>';
                 }
-                
+
                 row.innerHTML = `
                     <td style="font-size:12px; color:var(--text-muted); max-width: 80px; overflow:hidden; text-overflow: ellipsis;" title="${id}">${typeof id === 'string' ? id.split('-')[0] : id}</td>
                     <td>${f.remitente || authUser.nombre || '—'}</td>
@@ -1263,7 +1373,7 @@
                 `;
                 body.appendChild(row);
             });
-            
+
             // ── Actualizar tarjetas de estadísticas con datos reales ──
             const total = facturas.length;
             const sincronizadas = facturas.filter(f => f.estado === 'Sincronizado').length;
@@ -1332,7 +1442,7 @@
 
                 const realIva = latest.impuestos != null ? Number(latest.impuestos) : null;
                 const realSub = latest.subtotal != null ? Number(latest.subtotal) : null;
-                
+
                 const displayIva = realIva !== null ? realIva : ((latest.importe_total || 0) * 0.19 / 1.19);
                 const displaySub = realSub !== null ? realSub : ((latest.importe_total || 0) - (realIva || (latest.importe_total || 0) * 0.19 / 1.19));
 
@@ -1377,13 +1487,10 @@
                 document.getElementById('validation-fields').style.display = 'none';
             }
 
-            // ── Empty state en tabla ──
-            const emptyRow = document.getElementById('empty-row');
-            if (emptyRow) emptyRow.style.display = filtered.length === 0 ? '' : 'none';
         }
 
         // Funciones Globales
-        window.cambiarEstado = async function(id, estado) {
+        window.cambiarEstado = async function (id, estado) {
             try {
                 await fetch('/api/facturas/' + id + '/estado', {
                     method: 'PUT',
@@ -1396,7 +1503,7 @@
             }
         };
 
-        window.subirERP = async function(id) {
+        window.subirERP = async function (id) {
             if (!confirm('¿Estás seguro de subir esta factura al ERP?')) return;
             try {
                 const response = await fetch('/api/facturas/' + id + '/estado', {
@@ -1452,13 +1559,13 @@
             const btn = document.getElementById('btn-wa-reconnect');
             if (btn) { btn.disabled = true; btn.textContent = '⏳ Desvinculando...'; }
             try {
-                await fetch('/api/logout', { 
+                await fetch('/api/logout', {
                     method: 'POST',
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
                 // El servidor hará logout y reiniciará la conexión, generando un nuevo QR
                 updateWhatsAppUI('desconectado', null);
-            } catch(e) {
+            } catch (e) {
                 console.error('Error al desvincular:', e);
             } finally {
                 if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ph ph-arrows-clockwise"></i> Desvincular y Generar Nuevo QR'; }
@@ -1477,13 +1584,13 @@
                         updateWhatsAppUI(data.estado, data.qr);
                     }
                 }
-            } catch(e) {}
+            } catch (e) { }
         }
         pollWhatsAppEstado();
         setInterval(pollWhatsAppEstado, 3000);
 
         // ─── Funcionalidades de Demo Premium ──────────────────────────────────────────
-        
+
         function showToast(msg) {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -1493,15 +1600,15 @@
             setTimeout(() => toast.remove(), 5000);
         }
 
-        window.exportarCSV = function() {
+        window.exportarCSV = function () {
             if (allFacturas.length === 0) return alert('No hay datos para exportar');
-            
+
             const headers = ['ID', 'Proveedor', 'NIT', 'Número', 'Fecha', 'Total', 'Impuestos', 'Subtotal', 'Categoría', 'Método Pago', 'Estado', 'CUFE'];
             const rows = allFacturas.map(f => [
                 f.id, f.proveedor, f.nif_proveedor, f.numero_factura, f.fecha_factura, f.importe_total, f.impuestos, f.subtotal, f.categoria, f.metodo_pago, f.estado, f.cufe
             ]);
 
-            let csvContent = "data:text/csv;charset=utf-8," 
+            let csvContent = "data:text/csv;charset=utf-8,"
                 + headers.join(",") + "\n"
                 + rows.map(e => e.join(",")).join("\n");
 
@@ -1584,7 +1691,7 @@
 
         // Hook into updateTable to refresh charts
         const originalUpdateTable = updateTable;
-        updateTable = function(facturas) {
+        updateTable = function (facturas) {
             originalUpdateTable(facturas);
             updateCharts(facturas);
         };
@@ -1592,4 +1699,5 @@
         initWS();
     </script>
 </body>
+
 </html>
